@@ -9,7 +9,7 @@ import AudioVisualizer from "../audio-visualizer/AudioVisualizer";
 import LiquidSelect from "../liquid-select/LiquidSelect";
 import { formatBytes } from "../../utils/byteUtils";
 
-const ModalInput = ({ id, label, value, onChange, maxLength, placeholder, required = false, type = "text", inputMode, min = undefined, max = undefined }) => (
+const ModalInput = ({ id, label, value, onChange, maxLength, placeholder, required = false, type = "text", inputMode, min = undefined, max = undefined, ...props }) => (
   <div className="form-group">
     <div className="label-row">
       <label htmlFor={id}>{label}</label>
@@ -30,6 +30,7 @@ const ModalInput = ({ id, label, value, onChange, maxLength, placeholder, requir
       inputMode={inputMode}
       min={min}
       max={max}
+      {...props}
     />
   </div>
 );
@@ -73,6 +74,15 @@ const FilePreview = ({ file, type }) => {
   if (type === 'audio') return <audio controls src={url} style={{ marginTop: '8px', width: '100%' }} />;
   return null;
 };
+
+const validateLevelValue = (value) => {
+  let v = parseFloat(value.trim())
+  v = isNaN(v) ? 0 : v
+  v = Math.floor(v)
+  v = Math.max(v, -999)
+  v = Math.min(v, 999)
+  return v
+}
 
 export default function ChartModal({
   isOpen,
@@ -157,7 +167,20 @@ export default function ChartModal({
               <ModalInput id="artists_edit" label={t('modal.artists', 'Artist(s)')} value={form.artists} onChange={onUpdate("artists")} maxLength={limits?.artist || 50} placeholder="e.g. xi" />
               <ModalInput id="author_edit" label={t('modal.charter', 'Charter Name')} value={form.author} onChange={onUpdate("author")} maxLength={limits?.author || 50} placeholder="Your Name" />
 
-              <ModalInput id="rating_edit" label={t('modal.level', 'Level')} value={form.rating} onChange={onUpdate("rating")} placeholder="e.g. 25" type="number" inputMode="numeric" min={-999} max={999} />
+              <ModalInput
+                id="rating_edit"
+                label={t('modal.level', 'Level')}
+                value={form.rating}
+                onChange={(e) => {
+                  const value = validateLevelValue(e.target.value)
+                  onUpdate("rating")(value)
+                }}
+                placeholder="e.g. 25"
+                type="number"
+                inputMode="numeric"
+                min={-999}
+                max={999}
+              />
 
               <ModalTextarea id="description_edit" label={t('modal.description', 'Description (Optional)')} value={form.description} onChange={onUpdate("description")} maxLength={limits?.description || 1000} placeholder="Tell us about your chart..." />
 
@@ -360,7 +383,20 @@ export default function ChartModal({
               <ModalInput id="artists_up" label={`${t('modal.artists', 'Artist(s)')} *`} value={form.artists} onChange={onUpdate("artists")} maxLength={limits?.artist || 50} placeholder="e.g. Alstroemeria Records" required />
               <ModalInput id="author_up" label={`${t('modal.charter', 'Charter Name')} *`} value={form.author} onChange={onUpdate("author")} maxLength={limits?.author || 50} placeholder="Your username" required />
 
-              <ModalInput id="rating_up" label={`${t('modal.level', 'Level')} *`} value={form.rating} onChange={onUpdate("rating")} placeholder="e.g. 28" required type="number" inputMode="numeric" min={-999} max={999} />
+              <ModalInput
+                id="rating_up"
+                label={`${t('modal.level', 'Level')} *`}
+                value={form.rating}
+                onChange={(e) => {
+                  const value = validateLevelValue(e.target.value)
+                  onUpdate("rating")(value)
+                }}
+                placeholder="e.g. 28"
+                required type="number"
+                inputMode="numeric"
+                min={-999}
+                max={999}
+              />
 
               <ModalTextarea id="description_up" label={t('modal.description', 'Description (Optional)')} value={form.description} onChange={onUpdate("description")} maxLength={limits?.description || 1000} placeholder="Any comments or details..." />
 
