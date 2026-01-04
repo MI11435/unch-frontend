@@ -373,6 +373,7 @@ function HomeContent() {
                         id="staffPick"
                         checked={staffPick}
                         onChange={(e) => setStaffPick(e.target.checked)}
+                        className="accent-sky-500"
                         style={{ width: '18px', height: '18px', margin: 0, cursor: 'pointer' }}
                       />
                       <label htmlFor="staffPick" style={{ margin: 0, fontSize: '0.9rem', color: 'rgba(255,255,255,0.9)', cursor: 'pointer' }}>{t('search.staffPickOnly')}</label>
@@ -494,6 +495,7 @@ function HomeContent() {
                         id="likedByMe"
                         checked={likedBy}
                         onChange={(e) => setLikedBy(e.target.checked)}
+                        className="accent-sky-500"
                         style={{ width: '18px', height: '18px', margin: 0, cursor: 'pointer' }}
                       />
                       <label htmlFor="likedByMe" style={{ margin: 0, fontSize: '0.9rem', color: 'rgba(255,255,255,0.9)', cursor: 'pointer' }}>Liked by me</label>
