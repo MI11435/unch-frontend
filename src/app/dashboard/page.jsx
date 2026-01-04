@@ -1,7 +1,7 @@
 "use client";
 import "./page.css";
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Loader2, Globe, EyeOff, Eye, Lock, Unlock, Link as LinkIcon, MoreVertical, GitCommit, MessageSquare, BarChart2, Heart, Play, Plus, Search, X, Check, RefreshCw } from "lucide-react";
+import { Loader2, Globe, EyeOff, Eye, Lock, Unlock, Link as LinkIcon, MoreVertical, GitCommit, MessageSquare, BarChart2, Heart, Play, Plus, Search, X, Check, RefreshCw, XIcon, LockIcon, GlobeIcon } from "lucide-react";
 import PaginationControls from "../../components/pagination-controls/PaginationControls";
 import { useUser } from "../../contexts/UserContext";
 import { useRouter } from "next/navigation";
@@ -720,16 +720,22 @@ export default function Dashboard() {
                             <span title="Rating" className="rating-badge" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>Lv. {post.rating}</span>
                           </div>
                           {/* Current Status Indicator */}
-                          <span className={`status-text ${post.status?.toLowerCase()}`} style={{ marginLeft: '12px', fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 700 }}>
+
+                          <LiquidSelect
+                            value={post.status}
+                            type='ghost'
+                            className={`status-text ${post.status?.toLowerCase()}`}
+                            options={['UNLISTED', 'PRIVATE', 'PUBLIC'].map(x => ({ value: x, label: x }))}
+                            onChange={(e) => updateVisibility(post, e.target.value)}
+                          />
+
+                          {/* <span className={`status-text ${post.status?.toLowerCase()}`} style={{ marginLeft: '12px', fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 700 }}>
                             {post.status}
-                          </span>
+                          </span>*/}
                         </div>
                       </div>
 
-                      {/* Right: Actions */}
-                      <div className="card-actions-right">
-                        {renderVisibilityButtons(post)}
-                      </div>
+
                     </div>
                   ))}
                 </div>
