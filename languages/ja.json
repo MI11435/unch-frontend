@@ -55,7 +55,7 @@
         "tagsPlaceholder": "カンマ区切り",
         "staffPickOnly": "スタッフのお勧めのみ",
         "search": "検索",
-        "showingCharts": "{{count}} 譜面を表示中",
+        "showingCharts": "{count} 譜面を表示中",
         "page": "ページ",
         "of": "の",
         "previous": "前へ",

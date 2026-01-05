@@ -55,7 +55,7 @@
         "tagsPlaceholder": "Comma-separated",
         "staffPickOnly": "Staff Pick Only",
         "search": "Search",
-        "showingCharts": "Showing {{count}} charts",
+        "showingCharts": "Showing {count} charts",
         "page": "Page",
         "of": "of",
         "previous": "Previous",

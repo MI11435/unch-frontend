@@ -57,7 +57,7 @@ export default function PaginationControls({
   return (
     <div className="pagination-card">
       <div className="pagination-info">
-        {!isRandom && <p>{(t('search.showingCharts', { count: resultsCount }) || '').replace('{0}', resultsCount).replace('{{count}}', resultsCount)}</p>}
+        {!isRandom && <p>{(t('search.showingCharts', { count: resultsCount }) || '')}</p>}
       </div>
       <div className="pagination-controls">
         {isRandom ? (
