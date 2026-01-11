@@ -13,14 +13,16 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const siteUrl = process.env.NEXT_PUBLIC_SONOLUS_SERVER_URL || 'https://untitledcharts.com';
+
 export const metadata = {
-  metadataBase: new URL('https://unch.untitledcharts.com'),
+  metadataBase: new URL(siteUrl),
   title: 'UntitledCharts',
   description: 'The Community Platform for Sonolus',
   openGraph: {
     title: 'UntitledCharts',
     description: 'The Community Platform for Sonolus',
-    url: 'https://unch.untitledcharts.com',
+    url: siteUrl,
     siteName: 'UntitledCharts',
     images: [
       {

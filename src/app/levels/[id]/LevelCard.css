@@ -528,6 +528,8 @@
 .back-btn-container {
     max-width: 1200px;
     margin: 0 auto 20px;
+    position: relative;
+    z-index: 50;
 }
 
 .back-btn {

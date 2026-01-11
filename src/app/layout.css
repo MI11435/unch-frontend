@@ -1215,6 +1215,7 @@ body:not(.light-mode) .bg-grid-pattern {
     background: linear-gradient(to top, var(--background), var(--glass-bg));
     border-top: 1px solid var(--glass-border);
     overflow: visible;
+    z-index: 0;
 }
 
 .footer-miku {

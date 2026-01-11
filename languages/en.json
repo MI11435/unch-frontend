@@ -173,6 +173,7 @@
         "save": "Save",
         "loading": "Loading charts...",
         "noCharts": "No Charts Yet",
+        "noResults": "No Results",
         "createFirst": "Create your first chart to get started!",
         "totalLikes": "Total Likes",
         "totalComments": "Total Comments"

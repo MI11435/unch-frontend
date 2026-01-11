@@ -194,3 +194,22 @@ video {
     scroll-behavior: auto !important;
   }
 }
+
+/* Mobile performance optimizations */
+@media (max-width: 768px) {
+
+  .card-bg-blur,
+  .level-bg-blur {
+    filter: blur(15px) !important;
+  }
+
+  /* Disable backdrop-filter on mobile for performance */
+  .my-charts,
+  .search-controls-grid,
+  .carousel-arrow,
+  .comments-card,
+  .stats-card {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+}

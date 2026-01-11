@@ -47,15 +47,15 @@
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
-    background-repeat: no-repeat;
     filter: brightness(0.4);
     z-index: 0;
-    transition: all 0.5s ease;
+    transition: filter 0.3s ease;
+    will-change: filter;
 }
 
 .songlist .dashboard-li:hover .dashboard-bg-layer {
-    filter: brightness(0.6);
-    transform: scale(1.02);
+    filter: brightness(0.55);
+    /* Removed scale transform for performance */
 }
 
 .dashboard-content-layer {
@@ -94,7 +94,7 @@
 }
 
 .audio-controls {
-  width: 100%;
+    width: 100%;
 
 }
 
@@ -425,6 +425,7 @@ body.light-mode .stats-combined {
     .songlist .dashboard-img {
         height: 100px;
         width: 100px;
+        aspect-ratio: 1;
         border-radius: 10px;
         box-shadow: none;
         object-fit: cover;

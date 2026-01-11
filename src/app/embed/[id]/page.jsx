@@ -1,8 +1,9 @@
 import { notFound } from 'next/navigation';
 import "./page.css";
-import { Star, Download } from 'lucide-react';
+import { Heart, MessageSquare } from 'lucide-react';
 
 const APILink = process.env.NEXT_PUBLIC_API_URL;
+const SONOLUS_SERVER_URL = process.env.NEXT_PUBLIC_SONOLUS_SERVER_URL;
 
 async function fetchLevel(rawId) {
     const cleanId = rawId.replace(/^UnCh-/, '');
@@ -11,15 +12,27 @@ async function fetchLevel(rawId) {
     const json = await res.json();
     const data = json.data;
 
+    // Fetch comments count
+    let commentsCount = 0;
+    try {
+        const commentsRes = await fetch(`${APILink}/api/charts/${cleanId}/comment/`);
+        if (commentsRes.ok) {
+            const commentsData = await commentsRes.json();
+            commentsCount = Array.isArray(commentsData) ? commentsData.length : (commentsData?.data?.length || 0);
+        }
+    } catch (e) { /* ignore */ }
+
     return {
         id: data.id,
         sonolusId: rawId,
         title: data.title || 'Untitled Level',
         description: data.description || 'No description provided.',
         author: data.author_full || data.author || 'Unknown',
+        handle: data.author_handle || data.username || null,
         rating: data.rating || 0,
         likes: data.likes || data.like_count || 0,
-        downloads: data.downloads || 0
+        comments: commentsCount,
+        coverUrl: data.cover || data.jacket || null
     };
 }
 
@@ -33,33 +46,28 @@ export default async function EmbedPage({ params }) {
         notFound();
     }
 
+    const authorDisplay = level.handle ? `${level.author}#${level.handle}` : level.author;
+    const baseUrl = SONOLUS_SERVER_URL || '';
+
     return (
-        <a href={`https://unch.untitledcharts.com/levels/${level.sonolusId}`} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
+        <a href={`${baseUrl}/levels/${level.sonolusId}`} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
             <div className="embed-container">
-                <div className="embed-header">
-                    <img src="/636a8f1e76b38cb1b9eb0a3d88d7df6f.png" alt="Logo" className="embed-mini-logo" />
-                    <span>{level.author}</span>
-                </div>
-
-                <div className="embed-body">
-                    <h1 className="embed-title">{level.title}</h1>
-                    <p className="embed-description">{level.description}</p>
-                </div>
-
-                <div className="embed-stats">
-                    <div className="embed-stat-item">
-                        <span className="rating-dot"></span>
-                        <span>Lv. {level.rating}</span>
+                <div className="embed-content">
+                    {level.coverUrl && (
+                        <img src={level.coverUrl} alt={level.title} className="embed-thumbnail" />
+                    )}
+                    <div className="embed-info">
+                        <h1 className="embed-title">{level.title}</h1>
+                        <p className="embed-description">{level.description}</p>
                     </div>
-                    <div className="embed-stat-item">
-                        <Star className="stat-icon" />
-                        <span>{level.likes}</span>
-                    </div>
-                    {/* Add download count if available in future */}
                 </div>
 
                 <div className="embed-footer">
-                    <span>View on UntitledCharts</span>
+                    <span className="embed-stat"><Heart size={14} /> {level.likes}</span>
+                    <span className="embed-divider">|</span>
+                    <span className="embed-stat"><MessageSquare size={14} /> {level.comments}</span>
+                    <span className="embed-divider">|</span>
+                    <span className="embed-author">{authorDisplay}</span>
                 </div>
             </div>
         </a>

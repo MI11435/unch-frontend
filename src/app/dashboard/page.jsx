@@ -316,6 +316,16 @@ export default function Dashboard() {
     return true;
   }
 
+  // Helper to parse API error messages
+  const parseApiError = async (res) => {
+    try {
+      const json = await res.json();
+      return json.message || json.error || json.detail || JSON.stringify(json);
+    } catch {
+      return await res.text();
+    }
+  };
+
   const onSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -361,7 +371,8 @@ export default function Dashboard() {
       });
       if (!res.ok) {
         if (res.status === 401) { clearExpiredSession(); return; }
-        throw new Error(await res.text());
+        const errMsg = await parseApiError(res);
+        throw new Error(errMsg);
       }
 
       if (editData.status?.toLowerCase() !== vis.toLowerCase()) {
@@ -418,7 +429,8 @@ export default function Dashboard() {
       });
       if (!res.ok) {
         if (res.status === 401) { clearExpiredSession(); return; }
-        throw new Error(await res.text());
+        const errMsg = await parseApiError(res);
+        throw new Error(errMsg);
       }
 
       const result = await res.json();
@@ -466,10 +478,8 @@ export default function Dashboard() {
 
 
   const shouldShowPagination = () => {
-    if (posts.length === 0) return false;
-    const isMobileOrTablet = windowWidth < 1024;
     const total = totalCount || posts.length;
-    return isMobileOrTablet ? total > 10 : total > 30;
+    return total > 10;
   };
 
   const updateVisibility = async (post, newStatus) => {
@@ -630,113 +640,113 @@ export default function Dashboard() {
                     <div className="h-0.5 bg-cyan-100/50 w-full" />
                   </div>
                   <div>
-                      <ChevronDown className={"size-5 stroke-cyan-100/50 transition-all " + (!filtersExpanded && 'rotate-180')} />
+                    <ChevronDown className={"size-5 stroke-cyan-100/50 transition-all " + (!filtersExpanded && 'rotate-180')} />
                   </div>
                 </div>
-                  <form onSubmit={handleSearch} className="search-form overflow-hidden transition-all" style={{ width: '100%', ...(filtersExpanded ? {} : { height: 0 }) }}>
+                <form onSubmit={handleSearch} className="search-form overflow-hidden transition-all" style={{ width: '100%', ...(filtersExpanded ? {} : { height: 0 }) }}>
                   <div className="search-controls-grid">
-                        <div className="search-control-group" style={{ flexDirection: 'row', alignItems: 'center', minWidth: 'auto', flex: 'none', paddingBottom: '12px', gap: '8px' }}>
-                          <input
-                            type="checkbox"
-                            id="staffPick"
-                            checked={staffPick}
-                            onChange={(e) => setStaffPick(e.target.checked)}
-                            className="accent-sky-500"
-                            style={{ width: '18px', height: '18px', margin: 0, cursor: 'pointer' }}
-                          />
-                          <label htmlFor="staffPick" style={{ margin: 0, fontSize: '0.9rem', color: 'rgba(255,255,255,0.9)', cursor: 'pointer' }}>{t('search.staffPickOnly')}</label>
-                        </div>
-                        <div className="search-control-group">
-                          <label>{t('search.sortBy')}</label>
-                          <LiquidSelect
-                            value={sortBy}
-                            onChange={(e) => setSortBy(e.target.value)}
-                            options={[
-                              { value: "created_at", label: t('search.createdDate', 'Created Date'), icon: Clock },
-                              { value: "rating", label: "Rating", icon: Star },
-                              { value: "likes", label: "Likes", icon: Heart },
-                              { value: "abc", label: "Alphabetical", icon: Type },
-                              { value: "decaying_likes", label: "Decaying Likes", icon: User }
-                            ]}
-                          />
-                        </div>
+                    <div className="search-control-group" style={{ flexDirection: 'row', alignItems: 'center', minWidth: 'auto', flex: 'none', paddingBottom: '12px', gap: '8px' }}>
+                      <input
+                        type="checkbox"
+                        id="staffPick"
+                        checked={staffPick}
+                        onChange={(e) => setStaffPick(e.target.checked)}
+                        className="accent-sky-500"
+                        style={{ width: '18px', height: '18px', margin: 0, cursor: 'pointer' }}
+                      />
+                      <label htmlFor="staffPick" style={{ margin: 0, fontSize: '0.9rem', color: 'rgba(255,255,255,0.9)', cursor: 'pointer' }}>{t('search.staffPickOnly')}</label>
+                    </div>
+                    <div className="search-control-group">
+                      <label>{t('search.sortBy')}</label>
+                      <LiquidSelect
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value)}
+                        options={[
+                          { value: "created_at", label: t('search.createdDate', 'Created Date'), icon: Clock },
+                          { value: "rating", label: "Rating", icon: Star },
+                          { value: "likes", label: "Likes", icon: Heart },
+                          { value: "abc", label: "Alphabetical", icon: Type },
+                          { value: "decaying_likes", label: "Decaying Likes", icon: User }
+                        ]}
+                      />
+                    </div>
 
-                        <div className="search-control-group">
-                          <label>{t('search.order')}</label>
-                          <LiquidSelect
-                            value={sortOrder}
-                            onChange={(e) => setSortOrder(e.target.value)}
-                            options={[
-                              { value: "asc", label: t('search.ascending'), icon: ArrowUp },
-                              { value: "desc", label: t('search.descending'), icon: ArrowDown }
-                            ]}
-                          />
-                        </div>
+                    <div className="search-control-group">
+                      <label>{t('search.order')}</label>
+                      <LiquidSelect
+                        value={sortOrder}
+                        onChange={(e) => setSortOrder(e.target.value)}
+                        options={[
+                          { value: "asc", label: t('search.ascending'), icon: ArrowUp },
+                          { value: "desc", label: t('search.descending'), icon: ArrowDown }
+                        ]}
+                      />
+                    </div>
 
-                        <div className="search-control-group">
-                          <label>{t('search.minRating')}</label>
-                          <input
-                            type="number"
-                            placeholder={t('search.minRatingPlaceholder')}
-                            min="1"
-                            max="99"
-                            value={minRating}
-                            onChange={(e) => setMinRating(e.target.value)}
-                            className="liquid-input"
-                          />
-                        </div>
-                        <div className="search-control-group">
-                          <label>{t('search.maxRating')}</label>
-                          <input
-                            type="number"
-                            placeholder={t('search.maxRatingPlaceholder')}
-                            min="1"
-                            max="99"
-                            value={maxRating}
-                            onChange={(e) => setMaxRating(e.target.value)}
-                            className="liquid-input"
-                          />
-                        </div>
-                        <div className="search-control-group">
-                          <label>{t('search.descriptionIncludes', 'Description Includes')}</label>
-                          <input
-                            type="text"
-                            placeholder={t('search.descriptionPlaceholder', 'Search in descriptions...')}
-                            value={descriptionIncludes}
-                            onChange={(e) => setDescriptionIncludes(e.target.value)}
-                            className="liquid-input"
-                          />
-                        </div>
-                        <div className="search-control-group">
-                          <label>{t('search.titleIncludes')}</label>
-                          <input
-                            type="text"
-                            placeholder="Search in titles..."
-                            value={titleIncludes}
-                            onChange={(e) => setTitleIncludes(e.target.value)}
-                            className="liquid-input"
-                          />
-                        </div>
-                        <div className="search-control-group">
-                          <label>{t('search.artistsIncludes')}</label>
-                          <input
-                            type="text"
-                            placeholder="Search in artists..."
-                            value={artistsIncludes}
-                            onChange={(e) => setArtistsIncludes(e.target.value)}
-                            className="liquid-input"
-                          />
-                        </div>
-                        <div className="search-control-group">
-                          <label>{t('search.tags')}</label>
-                          <input
-                            type="text"
-                            placeholder="Comma-separated tags"
-                            value={tags}
-                            onChange={(e) => setTags(e.target.value)}
-                            className="liquid-input"
-                          />
-                        </div>
+                    <div className="search-control-group">
+                      <label>{t('search.minRating')}</label>
+                      <input
+                        type="number"
+                        placeholder={t('search.minRatingPlaceholder')}
+                        min="1"
+                        max="99"
+                        value={minRating}
+                        onChange={(e) => setMinRating(e.target.value)}
+                        className="liquid-input"
+                      />
+                    </div>
+                    <div className="search-control-group">
+                      <label>{t('search.maxRating')}</label>
+                      <input
+                        type="number"
+                        placeholder={t('search.maxRatingPlaceholder')}
+                        min="1"
+                        max="99"
+                        value={maxRating}
+                        onChange={(e) => setMaxRating(e.target.value)}
+                        className="liquid-input"
+                      />
+                    </div>
+                    <div className="search-control-group">
+                      <label>{t('search.descriptionIncludes', 'Description Includes')}</label>
+                      <input
+                        type="text"
+                        placeholder={t('search.descriptionPlaceholder', 'Search in descriptions...')}
+                        value={descriptionIncludes}
+                        onChange={(e) => setDescriptionIncludes(e.target.value)}
+                        className="liquid-input"
+                      />
+                    </div>
+                    <div className="search-control-group">
+                      <label>{t('search.titleIncludes')}</label>
+                      <input
+                        type="text"
+                        placeholder="Search in titles..."
+                        value={titleIncludes}
+                        onChange={(e) => setTitleIncludes(e.target.value)}
+                        className="liquid-input"
+                      />
+                    </div>
+                    <div className="search-control-group">
+                      <label>{t('search.artistsIncludes')}</label>
+                      <input
+                        type="text"
+                        placeholder="Search in artists..."
+                        value={artistsIncludes}
+                        onChange={(e) => setArtistsIncludes(e.target.value)}
+                        className="liquid-input"
+                      />
+                    </div>
+                    <div className="search-control-group">
+                      <label>{t('search.tags')}</label>
+                      <input
+                        type="text"
+                        placeholder="Comma-separated tags"
+                        value={tags}
+                        onChange={(e) => setTags(e.target.value)}
+                        className="liquid-input"
+                      />
+                    </div>
 
                     <button
                       type="submit"
@@ -753,8 +763,8 @@ export default function Dashboard() {
               {filteredPosts.length === 0 ? (
                 <div className="empty-state">
                   <div className="empty-icon">🎵</div>
-                  {posts.length > 0 ? (
-                    <h3>{t('dashboard.chartNotFound', 'Chart Not Found')}</h3>
+                  {posts.length > 0 || searchQuery ? (
+                    <h3>{t('dashboard.noResults', 'No Results')}</h3>
                   ) : (
                     <>
                       <h3>{t('dashboard.noCharts', 'No Charts Yet')}</h3>

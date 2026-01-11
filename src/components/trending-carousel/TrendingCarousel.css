@@ -46,15 +46,14 @@
     align-items: center;
     justify-content: center;
 
-    background: var(--glass-bg);
-    backdrop-filter: blur(10px);
+    background: rgba(15, 23, 42, 0.8);
     border: 1px solid var(--glass-border);
     border-radius: 50%;
 
     color: var(--foreground);
     cursor: pointer;
 
-    transition: all var(--transition-base);
+    transition: background 0.2s ease;
     opacity: 1;
 }
 

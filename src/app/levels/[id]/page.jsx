@@ -60,13 +60,11 @@ export async function generateMetadata({ params }) {
       title: `[${level.rating}] ${level.title}`,
       description: ogDescription,
       site_name: `UntitledCharts - ${level.author}`,
-      images: level.thumbnail ? [{ url: level.thumbnail }] : [],
     },
     twitter: {
       card: 'summary_large_image',
       title: `[${level.rating}] ${level.title}`,
       description: ogDescription,
-      images: level.thumbnail ? [level.thumbnail] : [],
     },
   };
 }

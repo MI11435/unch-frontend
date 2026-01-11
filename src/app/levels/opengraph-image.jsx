@@ -1,7 +1,7 @@
 import { ImageResponse } from 'next/og';
 
 export const runtime = 'edge';
-export const alt = 'Login - UntitledCharts';
+export const alt = 'Browse Levels - UntitledCharts';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
@@ -23,7 +23,7 @@ export default async function Image() {
                     fontSize: 80,
                     display: 'flex',
                 }}>
-                    🔐
+                    📊
                 </div>
 
                 {/* Title */}
@@ -33,7 +33,7 @@ export default async function Image() {
                     color: 'white',
                     display: 'flex',
                 }}>
-                    Login via Sonolus
+                    Browse Levels
                 </div>
 
                 {/* Subtitle */}
@@ -42,7 +42,7 @@ export default async function Image() {
                     color: '#94a3b8',
                     display: 'flex',
                 }}>
-                    Sign in to upload and manage your charts
+                    Discover and play community-created charts on Sonolus
                 </div>
 
                 {/* Branding */}

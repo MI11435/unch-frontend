@@ -27,14 +27,15 @@
     border-radius: 50%;
 
     opacity: 0;
-    filter: blur(30px) saturate(1.5);
+    filter: blur(20px) saturate(1.2);
     z-index: -1;
     transition: opacity 0.3s ease;
+    will-change: opacity;
 }
 
 .homepage-chart-card:hover .card-bg-blur {
-    opacity: 0.6;
-    animation: auraPulse 2s ease-in-out infinite;
+    opacity: 0.4;
+    /* Removed infinite animation for performance */
 }
 
 @keyframes auraPulse {

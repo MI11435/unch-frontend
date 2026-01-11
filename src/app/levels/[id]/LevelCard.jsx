@@ -74,7 +74,7 @@ export default function LevelCard({ level, SONOLUS_SERVER_URL }) {
   };
 
   const handleCopyEmbed = async () => {
-    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://unch.untitledcharts.com';
+    const origin = typeof window !== 'undefined' ? window.location.origin : (process.env.NEXT_PUBLIC_APP_URL || '');
     const embedUrl = `${origin}/embed/${level.sonolusId || 'UnCh-' + level.id}`;
     const embedCode = `<iframe src="${embedUrl}" width="450" height="240" style="border:none;border-radius:16px;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,0.4);" title="${level.title} - UntitledCharts" loading="lazy"></iframe>`;
     try {
@@ -307,13 +307,18 @@ export default function LevelCard({ level, SONOLUS_SERVER_URL }) {
       />
 
       <div className="back-btn-container">
-        <button onClick={() => {
-          if (window.history.length > 1) {
-            router.back();
-          } else {
-            router.push('/');
-          }
-        }} className="back-btn">
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            if (window.history.length > 2) {
+              router.back();
+            } else {
+              router.push('/');
+            }
+          }}
+          className="back-btn"
+          style={{ position: 'relative', zIndex: 51 }}
+        >
           <ArrowLeft size={20} />
           {t('levelDetail.back')}
         </button>

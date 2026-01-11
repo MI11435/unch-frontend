@@ -32,19 +32,9 @@ export default function HomepageChartCard({
         createdAt
     } = chart;
 
-    const [isMobile, setIsMobile] = useState(false);
     const [isHovered, setIsHovered] = useState(false);
     const [isFocused, setIsFocused] = useState(false);
     const localAudioRef = useRef(null);
-
-    useEffect(() => {
-        const checkMobile = () => {
-            setIsMobile(window.matchMedia("(max-width: 768px)").matches || 'ontouchstart' in window);
-        };
-        checkMobile();
-        window.addEventListener('resize', checkMobile);
-        return () => window.removeEventListener('resize', checkMobile);
-    }, []);
 
     useEffect(() => {
         if (audioRef && localAudioRef.current) {
@@ -67,17 +57,21 @@ export default function HomepageChartCard({
     const commentsCount = initialCommentsCount || 0;
 
     const handleMouseEnter = () => {
-        if (isMobile) return;
+        // Use matchMedia directly to avoid listeners
+        if (window.matchMedia("(max-width: 768px)").matches || 'ontouchstart' in window) return;
         setIsHovered(true);
     };
 
     const handleMouseLeave = () => {
-        if (isMobile) return;
+        // Use matchMedia directly to avoid listeners
+        if (window.matchMedia("(max-width: 768px)").matches || 'ontouchstart' in window) return;
         setIsHovered(false);
     };
 
     const handleCardClick = (e) => {
         if (e.target.closest('button')) return;
+
+        const isMobile = window.matchMedia("(max-width: 768px)").matches || 'ontouchstart' in window;
 
         if (isMobile) {
             if (!isFocused) {
