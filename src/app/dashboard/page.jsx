@@ -788,7 +788,7 @@ export default function Dashboard() {
                       {/* Left: Thumbnail */}
                       <div
                         className="card-thumb cursor-pointer"
-                        onClick={() => router.push(`/levels/${post.id}`)}
+                        onClick={() => router.push(`/levels/UnCh-${post.id}`)}
                       >
                         {post.coverUrl ? (
                           <img src={post.coverUrl} alt={post.title} loading="lazy" />

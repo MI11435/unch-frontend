@@ -15,7 +15,7 @@ async function fetchLevel(rawId) {
     // Fetch comments count
     let commentsCount = 0;
     try {
-        const commentsRes = await fetch(`${APILink}/api/charts/${cleanId}/comment/`);
+        const commentsRes = await fetch(`${APILink}/api/charts/${cleanId}/comment/?page=0`);
         if (commentsRes.ok) {
             const commentsData = await commentsRes.json();
             commentsCount = Array.isArray(commentsData) ? commentsData.length : (commentsData?.data?.length || 0);
@@ -28,7 +28,7 @@ async function fetchLevel(rawId) {
         title: data.title || 'Untitled Level',
         description: data.description || 'No description provided.',
         author: data.author_full || data.author || 'Unknown',
-        handle: data.author_handle || data.username || null,
+        handle: data.author_handle || data.username || data.author || null,
         rating: data.rating || 0,
         likes: data.likes || data.like_count || 0,
         comments: commentsCount,
@@ -46,11 +46,12 @@ export default async function EmbedPage({ params }) {
         notFound();
     }
 
-    const authorDisplay = level.handle ? `${level.author}#${level.handle}` : level.author;
+    const authorName = level.author ? level.author.split('#')[0] : 'Unknown';
+    const authorDisplay = authorName;
     const baseUrl = SONOLUS_SERVER_URL || '';
 
     return (
-        <a href={`${baseUrl}/levels/${level.sonolusId}`} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
+        <a href={`${baseUrl}/levels/UnCh-${level.id}`} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
             <div className="embed-container">
                 <div className="embed-content">
                     {level.coverUrl && (
@@ -63,11 +64,11 @@ export default async function EmbedPage({ params }) {
                 </div>
 
                 <div className="embed-footer">
-                    <span className="embed-stat"><Heart size={14} /> {level.likes}</span>
+                    <span className="embed-stat">Likes: {level.likes}</span>
                     <span className="embed-divider">|</span>
-                    <span className="embed-stat"><MessageSquare size={14} /> {level.comments}</span>
+                    <span className="embed-stat">Comments: {level.comments}</span>
                     <span className="embed-divider">|</span>
-                    <span className="embed-author">{authorDisplay}</span>
+                    <span className="embed-author">👤 {authorDisplay}</span>
                 </div>
             </div>
         </a>

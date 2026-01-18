@@ -51,7 +51,8 @@ export async function generateMetadata({ params }) {
     return { title: 'Level not found' };
   }
 
-  const ogDescription = `${level.likes} Likes | ${level.comments} Comments | Charted by ${level.author.split('#')[0]}\n${level.description}`;
+  const authorName = level.author ? level.author.split('#')[0] : 'Unknown';
+  const ogDescription = `${level.description}\n\nLikes: ${level.likes} | Comments: ${level.comments} | 👤 ${authorName}`;
 
   return {
     title: `[${level.rating}] ${level.title}`,

@@ -179,7 +179,11 @@ export default async function Image({ params }) {
                     </div>
 
                     <div style={{ fontSize: 22, color: '#64748b', display: 'flex' }}>
-                        Charted by {(levelData.author_full || levelData.author || 'Unknown').slice(0, 20)}
+                        Charted by {(levelData.author_full || levelData.author || 'Unknown').split('#')[0].slice(0, 20)}
+                    </div>
+
+                    <div style={{ fontSize: 20, color: '#94a3b8', display: 'flex', marginTop: 12, lineHeight: 1.4 }}>
+                        {(levelData.description || '').slice(0, 100)}{(levelData.description?.length > 100) ? '...' : ''}
                     </div>
 
                     <div style={{ marginTop: 24, display: 'flex', gap: 24, color: '#94a3b8', fontSize: 20 }}>
