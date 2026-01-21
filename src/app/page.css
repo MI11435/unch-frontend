@@ -12,7 +12,7 @@
     flex-direction: column;
     align-items: center;
     position: relative;
-    z-index: 200;
+    z-index: 5000;
     /* Increased to ensure it's above everything */
 }
 
@@ -523,6 +523,8 @@
     border: 1px solid rgba(255, 255, 255, 0.1);
     display: flex;
     gap: 20px;
+    position: relative;
+    z-index: 5001;
     flex-wrap: wrap;
     justify-content: flex-start;
     align-items: flex-end;

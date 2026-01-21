@@ -532,9 +532,18 @@ export default function LevelCard({ level, SONOLUS_SERVER_URL }) {
                     borderRadius: '12px',
                     border: '1px solid rgba(255,255,255,0.1)'
                   }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                      <span style={{ fontWeight: '600', color: '#38bdf8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '150px', display: 'inline-block' }}>{comment.username || "User"}</span>
-                      <span style={{ fontSize: '0.8em', color: 'rgba(255,255,255,0.5)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', alignItems: 'baseline', gap: '8px' }}>
+                      <span style={{
+                        fontWeight: '600',
+                        color: '#38bdf8',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        maxWidth: '70%',
+                        flexShrink: 1,
+                        display: 'inline-block'
+                      }}>{comment.username || "User"}</span>
+                      <span style={{ fontSize: '0.8em', color: 'rgba(255,255,255,0.5)', whiteSpace: 'nowrap', flexShrink: 0 }}>
                         {comment.created_at ? new Date(comment.created_at).toLocaleDateString() : ""}
                       </span>
                     </div>

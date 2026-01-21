@@ -1,17 +1,38 @@
 "use client";
 import { createContext, useContext, useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 const UserContext = createContext();
 
 const APILink = process.env.NEXT_PUBLIC_API_URL;
 
 export function UserProvider({ children }) {
+  const router = useRouter(); // Added router
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [sonolusUser, setSonolusUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState(null);
   const [isClient, setIsClient] = useState(false);
   const [sessionReady, setSessionReady] = useState(false);
+
+  const clearExpiredSession = (shouldRedirect = true, errorMessage = null) => {
+    localStorage.removeItem("session");
+    localStorage.removeItem("expiry");
+    setIsLoggedIn(false);
+    setSonolusUser(null);
+    setSession(null);
+    setSessionReady(true);
+    window.dispatchEvent(new CustomEvent('authChange'));
+
+    if (shouldRedirect) {
+      const params = new URLSearchParams();
+      params.set('reason', 'expired');
+      if (errorMessage) {
+        params.set('details', errorMessage);
+      }
+      router.push(`/login?${params.toString()}`);
+    }
+  };
 
   const checkAuthStatus = async () => {
     if (!isClient) return;
@@ -30,11 +51,9 @@ export function UserProvider({ children }) {
     }
 
     if (isNaN(expiryTime) || expiryTime < Date.now()) {
-      localStorage.removeItem("session");
-      localStorage.removeItem("expiry");
-      setIsLoggedIn(false);
-      setSonolusUser(null);
-      setSession(null);
+      clearExpiredSession(false); // Don't redirect immediately on load, let components handle it or just show logged out state? 
+      // Actually, if I'm on a protected page, the page redirects. If I'm on public page, I shouldn't be redirected.
+      // So false is correct here.
       setLoading(false);
       return;
     }
@@ -52,11 +71,14 @@ export function UserProvider({ children }) {
 
         if (!me.ok) {
           if (me.status === 401) {
-            localStorage.removeItem("session");
-            localStorage.removeItem("expiry");
-            setIsLoggedIn(false);
-            setSonolusUser(null);
-            setSession(null);
+            let errorMsg = "Unauthorized";
+            try {
+              const errData = await me.json();
+              errorMsg = errData.message || errData.detail || JSON.stringify(errData);
+            } catch (e) {
+              errorMsg = await me.text().catch(() => "Unauthorized");
+            }
+            clearExpiredSession(true, errorMsg); // Redirect on 401 with error
             setLoading(false);
             return;
           }
@@ -85,6 +107,7 @@ export function UserProvider({ children }) {
     setSession(null);
     setSessionReady(true);
     window.dispatchEvent(new CustomEvent('authChange'));
+    router.push('/login');
   };
 
   const refreshUser = () => {
@@ -102,16 +125,6 @@ export function UserProvider({ children }) {
     }
 
     return !!sessionValue;
-  };
-
-  const clearExpiredSession = () => {
-    localStorage.removeItem("session");
-    localStorage.removeItem("expiry");
-    setIsLoggedIn(false);
-    setSonolusUser(null);
-    setSession(null);
-    setSessionReady(true);
-    window.dispatchEvent(new CustomEvent('authChange'));
   };
 
   useEffect(() => {

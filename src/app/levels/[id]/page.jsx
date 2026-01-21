@@ -52,7 +52,7 @@ export async function generateMetadata({ params }) {
   }
 
   const authorName = level.author ? level.author.split('#')[0] : 'Unknown';
-  const ogDescription = `${level.description}\n\nLikes: ${level.likes} | Comments: ${level.comments} | 👤 ${authorName}`;
+  const ogDescription = `Likes: ${level.likes} | Comments: ${level.comments} | 👤 ${authorName}\n\u200B\n${level.description}`;
 
   return {
     title: `[${level.rating}] ${level.title}`,

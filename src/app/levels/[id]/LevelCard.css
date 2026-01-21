@@ -3,8 +3,10 @@
     padding-top: 120px;
     position: relative;
     box-sizing: border-box;
-    overflow: visible !important;
+    overflow-x: hidden !important;
+    /* Prevent horizontal scroll */
     height: auto !important;
+    width: 100%;
 }
 
 .level-bg-blur {
@@ -743,6 +745,8 @@
         grid-column: auto;
         max-width: 100%;
         width: 100%;
+        min-width: 0;
+        /* Override the fixed min-width */
         flex: none;
     }
 

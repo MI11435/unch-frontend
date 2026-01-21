@@ -1271,29 +1271,40 @@ body {
 }
 
 
-.search-control-group {
+
+/* Scoped to Dashboard Sidebar to prevent leaking to global search page */
+.dashboard-sidebar .search-control-group {
     display: flex;
     flex-direction: column;
     gap: 4px;
     min-width: 150px;
     flex: 1;
+    width: 100%;
+    min-width: 0;
 }
 
-.search-control-group label {
+.dashboard-sidebar .search-control-group label {
     color: rgba(255, 255, 255, 0.6);
     font-size: 0.8rem;
     font-weight: 500;
     margin-left: 4px;
 }
 
-.search-controls-grid {
+.dashboard-sidebar .search-controls-grid {
+    /* Fix layout destruction */
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    backdrop-filter: none;
+    padding: 0;
+
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 12px;
     width: 100%;
 }
 
-.search-btn {
+.dashboard-sidebar .search-btn {
     background: linear-gradient(135deg, var(--primary-accent), var(--secondary-accent));
     color: white;
     border: none;
@@ -1303,14 +1314,13 @@ body {
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s;
-    grid-column: 1 / -1;
-    justify-self: center;
+    /* Removed grid-column since we are flex column now */
     margin-top: 15px;
     width: 100%;
     box-shadow: 0 4px 15px rgba(56, 189, 248, 0.3);
 }
 
-.search-btn:hover {
+.dashboard-sidebar .search-btn:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(56, 189, 248, 0.5);
     filter: brightness(1.1);

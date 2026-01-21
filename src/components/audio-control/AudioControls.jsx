@@ -102,8 +102,8 @@ export default function AudioControls({ bgmUrl, onPlay, onStop, isPlaying, isAct
       console.log('Attempting to play audio:', bgmUrl);
       setIsLoading(true);
       onPlay();
-      
-      
+
+
       if (audioElementRef.current) {
         try {
           await audioElementRef.current.play();
@@ -116,8 +116,8 @@ export default function AudioControls({ bgmUrl, onPlay, onStop, isPlaying, isAct
           }
         }
       }
-      
-      
+
+
       loadingTimeoutRef.current = setTimeout(() => {
         setIsLoading(false);
         loadingTimeoutRef.current = null;
@@ -175,17 +175,17 @@ export default function AudioControls({ bgmUrl, onPlay, onStop, isPlaying, isAct
             <Play size={16} />
           )}
         </button>
-        
+
         <div className="audio-info">
           <div className="time-display">
             {formatTime(currentTime)} / {formatTime(duration)}
           </div>
-          
+
           <div className="progress-bar" onClick={handleSeek}>
-            <div 
-              className="progress-fill" 
-              style={{ 
-                width: duration > 0 ? `${(currentTime / duration) * 100}%` : '0%' 
+            <div
+              className="progress-fill"
+              style={{
+                width: duration > 0 ? `${(currentTime / duration) * 100}%` : '0%'
               }}
             />
           </div>

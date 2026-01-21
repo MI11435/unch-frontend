@@ -4,11 +4,12 @@ import { useEffect, useState } from "react";
 import "./page.css";
 import { useUser } from "../../../contexts/UserContext";
 import { useLanguage } from "../../../contexts/LanguageContext";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import LoginBackground from "./LoginBackground";
 
 export default function Login() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { t } = useLanguage();
   const [isWaiting, setIsWaiting] = useState(false);
   const [externalLoginId, setExternalLoginId] = useState(null);
@@ -31,6 +32,19 @@ export default function Login() {
       setIsWaiting(false);
     }
   }, [sessionReady, sonolusUser, isSessionValid, router]);
+
+  useEffect(() => {
+    const reason = searchParams.get('reason');
+    const details = searchParams.get('details');
+
+    if (reason === 'expired') {
+      let msg = t('login.sessionExpired', "Your session has expired. Please log in again.");
+      if (details) {
+        msg += ` (Server says: ${decodeURIComponent(details)})`;
+      }
+      setLoginError(msg);
+    }
+  }, [searchParams, t]);
 
   const sonolusServerUrl = process.env['NEXT_PUBLIC_SONOLUS_SERVER_URL'];
   const apiUrl = process.env['NEXT_PUBLIC_API_URL'];

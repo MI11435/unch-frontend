@@ -1,7 +1,7 @@
 "use client";
 import "./page.css";
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Loader2, Globe, EyeOff, Eye, Lock, Unlock, Link as LinkIcon, MoreVertical, GitCommit, MessageSquare, BarChart2, Heart, Play, Plus, Search, X, Check, RefreshCw, XIcon, LockIcon, GlobeIcon, Clock, Star, Type, User, ArrowUp, ArrowDown, MoveDown, Triangle, ChevronDown } from "lucide-react";
+import { Loader2, Globe, EyeOff, Eye, Lock, Unlock, Link as LinkIcon, MoreVertical, GitCommit, MessageSquare, BarChart2, Heart, Play, Plus, Search, X, Check, RefreshCw, XIcon, LockIcon, GlobeIcon, Clock, Star, Type, User, ArrowUp, ArrowDown, MoveDown, Triangle, ChevronDown, Pencil, Trash2, Calendar } from "lucide-react";
 import PaginationControls from "../../components/pagination-controls/PaginationControls";
 import { useUser } from "../../contexts/UserContext";
 import { useRouter } from "next/navigation";
@@ -103,6 +103,17 @@ export default function Dashboard() {
   const [totalCount, setTotalCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
 
+  const [staffPick, setStaffPick] = useState(false)
+  const [sortBy, setSortBy] = useState('created_at')
+  const [sortOrder, setSortOrder] = useState('desc')
+  const [minRating, setMinRating] = useState(1)
+  const [maxRating, setMaxRating] = useState(99)
+  const [descriptionIncludes, setDescriptionIncludes] = useState('')
+  const [titleIncludes, setTitleIncludes] = useState('')
+  const [artistsIncludes, setArtistsIncludes] = useState('')
+  const [tags, setTags] = useState('')
+  const [filtersExpanded, setFiltersExpanded] = useState(true)
+
   const [isOpen, setIsOpen] = useState(false);
   const [mode, setMode] = useState(null);
   const [editData, setEditData] = useState(null);
@@ -163,12 +174,10 @@ export default function Dashboard() {
     visibility: "public"
   });
 
-  const filteredPosts = posts.filter(post =>
-    post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (post.author && post.author.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  // Use posts directly since API handles filtering
+  const filteredPosts = posts;
 
-  const handleMyCharts = async (page = 0) => {
+  const fetchCharts = useCallback(async () => {
     setLoading(true);
     setError(null);
     const token = localStorage.getItem("session");
@@ -177,51 +186,97 @@ export default function Dashboard() {
       return;
     }
     try {
-      const res = await fetch(`${APILink}/api/charts?page=${page}&type=advanced&status=ALL&limit=10`, {
+      const apiBase = APILink;
+      const queryParams = new URLSearchParams();
+      queryParams.append('type', 'advanced');
+      queryParams.append('page', currentPage.toString());
+      queryParams.append('limit', '10');
+      queryParams.append('status', 'ALL');
+
+      // Add filters if present
+      if (staffPick) queryParams.append('staff_pick', '1');
+      if (minRating) queryParams.append('min_rating', minRating);
+      if (maxRating) queryParams.append('max_rating', maxRating);
+      if (tags) queryParams.append('tags', tags);
+      if (titleIncludes) queryParams.append('title_includes', titleIncludes);
+      if (descriptionIncludes) queryParams.append('description_includes', descriptionIncludes);
+      if (artistsIncludes) queryParams.append('artists_includes', artistsIncludes);
+      if (searchQuery) queryParams.append('meta_includes', searchQuery);
+
+      queryParams.append('sort_by', sortBy);
+      queryParams.append('sort_order', sortOrder);
+      queryParams.append('limit', '10');
+
+      const res = await fetch(`${apiBase}/api/charts?${queryParams.toString()}`, {
         headers: { Authorization: `${session}` },
       });
+
       if (!res.ok) {
         if (res.status === 401 || res.status === 403) {
           clearExpiredSession();
           setLoading(false);
           return;
         }
-        throw new Error(`Network error: ${res.status}`);
+        const errText = await res.text();
+        throw new Error(`Network error: ${res.status} - ${errText}`);
       }
+
       const data = await res.json();
       const BASE = data.asset_base_url || `${APILink}`;
       const items = Array.isArray(data?.data) ? data.data : [];
-      const normalized = items.map((item) => ({
-        id: item.id,
-        title: item.title,
-        artists: item.artists,
-        author: item.author_full,
-        author_field: item.chart_design,
-        authorId: item.author,
-        rating: item.rating,
-        description: item.description,
-        tags: item.tags,
-        coverUrl: item.jacket_file_hash ? `${BASE}/${item.author}/${item.id}/${item.jacket_file_hash}` : "",
-        likeCount: item.like_count ?? item.likes ?? 0,
-        commentsCount: item.comment_count ?? item.comments_count ?? (Array.isArray(item.comments) ? item.comments.length : item.comments) ?? 0,
-        createdAt: item.created_at,
-        status: item.status,
-        hasJacket: !!item.jacket_file_hash,
-        hasAudio: !!item.music_hash,
-        hasChart: !!item.chart_hash,
-        hasPreview: !!item.preview_hash,
-        hasBackground: !!item.background_hash
-      }));
+      const normalized = items.map((item) => {
+        // Safe access to hashes with potential fallbacks
+        const jacketHash = item.jacket_file_hash || item.jacket_hash || item.cover_hash || item.cover_file_hash;
+        const bgmHash = item.music_hash || item.bgm_hash || item.audio_hash || item.bgm_file_hash || item.music_file_hash || item.audio_file_hash || item.sound_hash;
+        const chartHash = item.chart_hash || item.chart_file_hash || item.data_hash || item.data_file_hash;
+        const previewHash = item.preview_hash || item.preview_file_hash;
+        const backgroundHash = item.background_hash || item.background_file_hash;
+
+        const jacketUrl = jacketHash ? `${BASE}/${item.author}/${item.id}/${jacketHash}` : "";
+        const bgmUrl = bgmHash ? `${BASE}/${item.author}/${item.id}/${bgmHash}` : "";
+        const chartUrl = chartHash ? `${BASE}/${item.author}/${item.id}/${chartHash}` : "";
+
+        const previewUrl = previewHash ? `${BASE}/${item.author}/${item.id}/${previewHash}` : "";
+        const backgroundUrl = backgroundHash ? `${BASE}/${item.author}/${item.id}/${backgroundHash}` : "";
+
+        return {
+          id: item.id,
+          title: item.title,
+          artists: item.artists,
+          author: item.author_full,
+          author_field: item.chart_design,
+          authorId: item.author,
+          rating: item.rating,
+          description: item.description,
+          tags: item.tags,
+          coverUrl: jacketUrl,
+          jacketUrl, // added
+          bgmUrl, // added
+          chartUrl, // added
+          previewUrl, // added
+          backgroundUrl, // added
+          likeCount: item.like_count ?? item.likes ?? 0,
+          commentsCount: item.comment_count ?? item.comments_count ?? (Array.isArray(item.comments) ? item.comments.length : item.comments) ?? 0,
+          createdAt: item.created_at,
+          publishedAt: item.published_at,
+          status: item.status,
+          hasJacket: !!jacketHash,
+          hasAudio: !!bgmHash,
+          hasChart: !!chartHash,
+          hasPreview: !!previewHash,
+          hasBackground: !!backgroundHash
+        }
+      });
       setPosts(normalized);
       setPageCount(data.pageCount || 0);
       setTotalCount(data.data?.[0]?.total_count || 0);
-      setCurrentPage(page);
     } catch (err) {
-      setError(err.message);
+      console.error(err);
+      setError(err.message || "Failed to load charts");
     } finally {
       setLoading(false);
     }
-  };
+  }, [APILink, currentPage, session, staffPick, searchQuery, sortBy, sortOrder, minRating, maxRating, tags, titleIncludes, descriptionIncludes, artistsIncludes, clearExpiredSession]);
 
   const fetchLimits = async () => {
     try {
@@ -237,10 +292,10 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (isClient && sessionReady) {
-      handleMyCharts();
+      fetchCharts();
       fetchLimits();
     }
-  }, [isClient, sessionReady]);
+  }, [isClient, sessionReady, currentPage, fetchCharts]); // Added currentPage here to trigger refetch on pagination
 
   const openUpload = () => {
     setMode("upload");
@@ -252,14 +307,16 @@ export default function Dashboard() {
     setIsOpen(true);
   };
 
-  const openEdit = (post) => {
+  const openEdit = useCallback((post) => {
     setMode("edit");
     const vis = post.status && typeof post.status === 'string' ? post.status.toLowerCase() : "public";
     setForm({
       title: post.title, artists: post.artists, author: post.author_field, rating: String(post.rating ?? ""),
       description: post.description || "", tags: post.tags || "",
       jacket: null, bgm: null, chart: null, preview: null, background: null,
-      visibility: vis, removePreview: false, removeBackground: false
+      visibility: vis,
+      removePreview: false, removeBackground: false,
+      removeJacket: false, removeAudio: false, removeChart: false
     });
     setEditData({
       id: post.id,
@@ -267,14 +324,18 @@ export default function Dashboard() {
       hasAudio: post.hasAudio,
       hasChart: post.hasChart,
       hasPreview: post.hasPreview,
-      hasPreview: post.hasPreview,
       hasBackground: post.hasBackground,
-      status: post.status
+      status: post.status,
+      jacketUrl: post.jacketUrl,
+      bgmUrl: post.bgmUrl,
+      chartUrl: post.chartUrl,
+      previewUrl: post.previewUrl,
+      backgroundUrl: post.backgroundUrl
     });
     setError(null);
     setIsOpen(true);
     setActiveMenu(null);
-  };
+  }, []);
 
   const closePanel = () => {
     setIsOpen(false);
@@ -370,9 +431,11 @@ export default function Dashboard() {
         body: formData
       });
       if (!res.ok) {
-        if (res.status === 401) { clearExpiredSession(); return; }
-        const errMsg = await parseApiError(res);
-        throw new Error(errMsg);
+        if (!res.ok) {
+          const errMsg = await parseApiError(res);
+          if (res.status === 401) { clearExpiredSession(true, errMsg); return; }
+          throw new Error(errMsg);
+        }
       }
 
       if (editData.status?.toLowerCase() !== vis.toLowerCase()) {
@@ -391,7 +454,7 @@ export default function Dashboard() {
       }
 
       setIsOpen(false);
-      handleMyCharts(currentPage);
+      fetchCharts();
     } catch (e) { throw e; } finally { setLoading(false); }
   };
 
@@ -428,8 +491,8 @@ export default function Dashboard() {
         body: formData
       });
       if (!res.ok) {
-        if (res.status === 401) { clearExpiredSession(); return; }
         const errMsg = await parseApiError(res);
+        if (res.status === 401) { clearExpiredSession(true, errMsg); return; }
         throw new Error(errMsg);
       }
 
@@ -449,7 +512,7 @@ export default function Dashboard() {
       }
 
       setIsOpen(false);
-      handleMyCharts(currentPage);
+      fetchCharts();
     } catch (err) {
       setError(err.message);
     } finally {
@@ -457,10 +520,10 @@ export default function Dashboard() {
     }
   };
 
-  const handleDelete = (post) => {
+  const handleDelete = useCallback((post) => {
     setDeletablePost(post);
     setActiveMenu(null);
-  };
+  }, []);
 
   const actuallyDelete = async () => {
     if (!deletablePost) return;
@@ -469,8 +532,12 @@ export default function Dashboard() {
       const res = await fetch(`${APILink}/api/charts/${deletablePost.id}/delete/`, {
         method: "DELETE", headers: { Authorization: session }
       });
-      if (!res.ok) throw new Error(await res.text());
-      handleMyCharts(currentPage);
+      if (!res.ok) {
+        const errMsg = await res.text();
+        if (res.status === 401) { clearExpiredSession(true, errMsg); return; }
+        throw new Error(errMsg);
+      }
+      fetchCharts();
     } catch (e) { setError(e.message); } finally { setDeletablePost(null); setLoading(false); }
   };
 
@@ -482,7 +549,7 @@ export default function Dashboard() {
     return total > 10;
   };
 
-  const updateVisibility = async (post, newStatus) => {
+  const updateVisibility = useCallback(async (post, newStatus) => {
 
     const oldStatus = post.status;
     setPosts(currentPosts => currentPosts.map(p =>
@@ -505,94 +572,17 @@ export default function Dashboard() {
       ));
       alert(t('dashboard.updateFailed', 'Failed to update visibility'));
     }
-  };
+  }, [APILink, session, t]);
 
-  const [staffPick, setStaffPick] = useState(false)
-  const [sortBy, setSortBy] = useState('created_at')
-  const [sortOrder, setSortOrder] = useState('desc')
-  const [minRating, setMinRating] = useState(1)
-  const [maxRating, setMaxRating] = useState(99)
-  const [descriptionIncludes, setDescriptionIncludes] = useState('')
-  const [titleIncludes, setTitleIncludes] = useState('')
-  const [artistsIncludes, setArtistsIncludes] = useState('')
-  const [tags, setTags] = useState('')
-  const [filtersExpanded, setFiltersExpanded] = useState(true)
+
 
   const handleSearch = (e) => {
     e?.preventDefault()
-    setCurrentPage(0)
-    fetchSearchData()
+    if (currentPage === 0) fetchCharts();
+    else setCurrentPage(0);
   }
 
-  const fetchSearchData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    setPosts([])
-    const token = localStorage.getItem("session");
-    if (!token) {
-      setLoading(false);
-      return;
-    }
-    try {
-      const apiBase = APILink;
-
-      const queryParams = new URLSearchParams();
-      queryParams.append('type', 'advanced');
-      queryParams.append('page', '0');
-      queryParams.append('limit', '10');
-
-      if (staffPick) queryParams.append('staff_pick', '1');
-
-      if (minRating) queryParams.append('min_rating', minRating);
-      if (maxRating) queryParams.append('max_rating', maxRating);
-      if (tags) queryParams.append('tags', tags);
-      if (titleIncludes) queryParams.append('title_includes', titleIncludes);
-      if (descriptionIncludes) queryParams.append('description_includes', descriptionIncludes);
-      if (artistsIncludes) queryParams.append('artists_includes', artistsIncludes);
-      if (searchQuery) queryParams.append('meta_includes', searchQuery);
-
-      queryParams.append('sort_by', sortBy);
-      queryParams.append('sort_order', sortOrder);
-      queryParams.append('status', 'ALL');
-
-      const res = await fetch(`${apiBase}/api/charts?${queryParams.toString()}`, {
-        headers: { Authorization: `${session}` },
-      });
-      console.log(res)
-      const data = await res.json();
-      const BASE = data.asset_base_url || `${APILink}`;
-      const items = Array.isArray(data?.data) ? data.data : [];
-      const normalized = items.map((item) => ({
-        id: item.id,
-        title: item.title,
-        artists: item.artists,
-        author: item.author_full,
-        author_field: item.chart_design,
-        authorId: item.author,
-        rating: item.rating,
-        description: item.description,
-        tags: item.tags,
-        coverUrl: item.jacket_file_hash ? `${BASE}/${item.author}/${item.id}/${item.jacket_file_hash}` : "",
-        likeCount: item.like_count ?? item.likes ?? 0,
-        commentsCount: item.comment_count ?? item.comments_count ?? (Array.isArray(item.comments) ? item.comments.length : item.comments) ?? 0,
-        createdAt: item.created_at,
-        status: item.status,
-        hasJacket: !!item.jacket_file_hash,
-        hasAudio: !!item.music_hash,
-        hasChart: !!item.chart_hash,
-        hasPreview: !!item.preview_hash,
-        hasBackground: !!item.background_hash
-      }));
-      setPosts(normalized);
-      setPageCount(data.pageCount || 0);
-      setTotalCount(data.data?.[0]?.total_count || 0);
-      setCurrentPage(page);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }, [APILink, currentPage, staffPick, searchQuery, sortBy, sortOrder, minRating, maxRating, tags, titleIncludes, descriptionIncludes, artistsIncludes, setPosts, setPageCount, setLoading, setError]);
+  // fetchSearchData removed in favor of fetchCharts
 
   return (
     <div className="dashboard-container">
@@ -777,79 +767,96 @@ export default function Dashboard() {
                 </div>
               ) : (
                 <div className="dashboard-grid">
-                  {filteredPosts.map((post) => (
-                    <div key={post.id} className="chart-card-redesigned">
-                      {/* Background Layer */}
-                      <div
-                        className="card-bg"
-                        style={{ backgroundImage: `url(${post.coverUrl || '/placeholder.png'})` }}
-                      />
+                  {filteredPosts.map((post) => {
+                    const isPublic = post.status === "PUBLIC";
+                    const displayDate = isPublic ? (post.publishedAt || post.createdAt) : post.createdAt;
+                    const dateLabel = isPublic ? t('dashboard.published', 'Published') : t('dashboard.uploaded', 'Uploaded');
 
-                      {/* Left: Thumbnail */}
-                      <div
-                        className="card-thumb cursor-pointer"
-                        onClick={() => router.push(`/levels/UnCh-${post.id}`)}
-                      >
-                        {post.coverUrl ? (
-                          <img src={post.coverUrl} alt={post.title} loading="lazy" />
-                        ) : (
-                          <div className="placeholder-thumb">
-                            <span className="no-img-text">No Image</span>
-                          </div>
-                        )}
-                      </div>
+                    return (
+                      <div key={post.id} className="chart-card-redesigned">
+                        {/* Background Layer */}
+                        <div
+                          className="card-bg"
+                          style={{ backgroundImage: `url(${post.coverUrl || '/placeholder.png'})` }}
+                        />
 
-                      {/* Middle: Info */}
-                      <div className="card-info">
-                        <div className="info-header">
-                          <div className="flex items-center justify-start gap-2">
-                            <h3 title={post.title}>{post.title}</h3>
-                            <span title="Rating" className="rating-badge text-xs" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>Lv. {post.rating}</span>
-                          </div>
-                          <div className="action-menu-wrapper">
-                            <button
-                              className="icon-btn-ghost"
-                              onClick={(e) => { e.stopPropagation(); setActiveMenu(activeMenu === post.id ? null : post.id); }}
-                            >
-                              <MoreVertical size={16} />
-                            </button>
-                            <div className={`action-dropdown ${activeMenu === post.id ? 'active' : ''}`} style={{ display: activeMenu === post.id ? 'flex' : 'none' }}>
-                              <button onClick={() => openEdit(post)}>{t('dashboard.edit', 'Edit')}</button>
-                              <button onClick={() => handleDelete(post)} className="text-red">{t('dashboard.delete', 'Delete')}</button>
+                        {/* Left: Thumbnail */}
+                        <div
+                          className="card-thumb cursor-pointer"
+                          onClick={() => router.push(`/levels/UnCh-${post.id}`)}
+                        >
+                          {post.coverUrl ? (
+                            <img src={post.coverUrl} alt={post.title} loading="lazy" />
+                          ) : (
+                            <div className="placeholder-thumb">
+                              <span className="no-img-text">No Image</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Middle: Info */}
+                        <div className="card-info">
+                          <div className="info-header">
+                            <div className="flex items-center justify-start gap-2">
+                              <h3 title={post.title}>{post.title}</h3>
+                              <span title="Rating" className="rating-badge text-xs" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>Lv. {post.rating}</span>
+                            </div>
+                            <div className="action-menu-wrapper">
+                              <button
+                                className="icon-btn-ghost"
+                                onClick={(e) => { e.stopPropagation(); setActiveMenu(activeMenu === post.id ? null : post.id); }}
+                              >
+                                <MoreVertical size={16} />
+                              </button>
+                              <div
+                                className={`action-dropdown ${activeMenu === post.id ? 'active' : ''}`}
+                                style={{ display: activeMenu === post.id ? 'flex' : 'none' }}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {(post.status === 'PUBLIC' || post.status === 'UNLISTED') && (
+                                  <button onClick={() => router.push(`/levels/UnCh-${post.id}`)}>
+                                    {t('dashboard.view', 'View')}
+                                  </button>
+                                )}
+                                {sonolusUser && sonolusUser.sonolus_id === post.authorId && (
+                                  <>
+                                    <button onClick={() => openEdit(post)}>
+                                      {t('dashboard.edit', 'Edit')}
+                                    </button>
+                                    <button className="text-red" onClick={() => handleDelete(post)}>
+                                      {t('dashboard.delete', 'Delete')}
+                                    </button>
+                                  </>
+                                )}
+                              </div>
                             </div>
                           </div>
-                        </div>
 
-                        <span className="author-name">{post.author_field || post.author || 'Unknown'}</span>
+                          <span className="author-name">{post.author_field || post.author || 'Unknown'}</span>
 
-                        <div className="card-meta-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px', fontSize: '0.8rem', color: '#64748b', gap: '12px' }}>
-                          <span className="commit-date">
-                            {post.createdAt ? new Date(post.createdAt).toLocaleDateString() : 'Unknown Date'}
-                          </span>
-                          <div className="footer-stats" style={{ display: 'flex', gap: '12px' }}>
-                            <span title="Likes" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Heart size={12} /> {post.likeCount || 0}</span>
-                            <span title="Comments" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><MessageSquare size={12} /> {post.commentsCount || 0}</span>
+                          <div className="card-meta-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px', fontSize: '0.8rem', color: '#64748b', gap: '12px' }}>
+                            <span className="commit-date" title={`${dateLabel}: ${displayDate}`}>
+                              {displayDate ? new Date(displayDate).toLocaleDateString() : 'Unknown Date'}
+                            </span>
+                            <div className="footer-stats" style={{ display: 'flex', gap: '12px' }}>
+                              <span title="Likes" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Heart size={12} /> {post.likeCount || 0}</span>
+                              <span title="Comments" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><MessageSquare size={12} /> {post.commentsCount || 0}</span>
 
+                            </div>
+                            {/* Current Status Indicator */}
+
+                            <LiquidSelect
+                              value={post.status}
+                              type='ghost'
+                              className={`status-text ${post.status?.toLowerCase()}`}
+                              options={['UNLISTED', 'PRIVATE', 'PUBLIC'].map(x => ({ value: x, label: x }))}
+                              onChange={(e) => updateVisibility(post, e.target.value)}
+                            />
                           </div>
-                          {/* Current Status Indicator */}
-
-                          <LiquidSelect
-                            value={post.status}
-                            type='ghost'
-                            className={`status-text ${post.status?.toLowerCase()}`}
-                            options={['UNLISTED', 'PRIVATE', 'PUBLIC'].map(x => ({ value: x, label: x }))}
-                            onChange={(e) => updateVisibility(post, e.target.value)}
-                          />
-
-                          {/* <span className={`status-text ${post.status?.toLowerCase()}`} style={{ marginLeft: '12px', fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 700 }}>
-                            {post.status}
-                          </span>*/}
                         </div>
                       </div>
-
-
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
 
@@ -857,8 +864,8 @@ export default function Dashboard() {
                 <div className="pagination-wrapper">
                   <PaginationControls
                     currentPage={currentPage}
-                    totalPages={pageCount}
-                    onPageChange={handleMyCharts}
+                    pageCount={pageCount}
+                    onPageChange={setCurrentPage}
                   />
                 </div>
               )}
