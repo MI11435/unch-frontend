@@ -54,6 +54,8 @@
     "tags": "Tags",
     "tagsPlaceholder": "Comma-separated",
     "staffPickOnly": "Staff Pick Only",
+    "searchTitles": "Search in titles...",
+    "searchArtists": "Search in artists...",
     "search": "Search",
     "showingCharts": "Showing {count} charts",
     "page": "Page",
@@ -140,6 +142,9 @@
     "level": "Lv. {1}"
   },
   "dashboard": {
+    "filterSearch": "Filter Search",
+    "unknownAuthor": "Unknown",
+    "unknownDate": "Unknown Date",
     "title": "Dashboard",
     "welcome": "Welcome",
     "searchPlaceholder": "Search",
@@ -177,12 +182,9 @@
     "createFirst": "Create your first chart to get started!",
     "totalLikes": "Total Likes",
     "totalComments": "Total Comments",
-
     "published": "Published",
     "uploaded": "Uploaded",
-
     "view": "View",
-
     "publicOptions": "Public options",
     "publicNow": "Public Now",
     "schedulePublish": "Schedule publish",

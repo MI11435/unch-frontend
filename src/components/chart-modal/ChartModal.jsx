@@ -1,7 +1,7 @@
 "use client";
 import { useState, useRef, useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Loader2, Globe, EyeOff, Lock, Unlock, Link as LinkIcon, XIcon } from "lucide-react";
+import { Trash2, Upload, X as XIcon, Image as ImageIcon, Music, FileText, Loader2, Play, Pause, Square, Calendar, CheckCircle as CheckCircleIcon, Globe, Link as LinkIcon, Lock, Clock } from "lucide-react";
 import "./ChartModal.css";
 import { useLanguage } from "../../contexts/LanguageContext";
 import AudioControls from "../audio-control/AudioControls";
@@ -9,12 +9,20 @@ import AudioVisualizer from "../audio-visualizer/AudioVisualizer";
 import LiquidSelect from "../liquid-select/LiquidSelect";
 import { formatBytes } from "../../utils/byteUtils";
 
+// Helper function to validate level input
+const validateLevelValue = (val) => {
+  if (val === '' || val === '-') return val;
+  const num = parseInt(val, 10);
+  if (isNaN(num)) return '';
+  return Math.max(-999, Math.min(999, num)).toString();
+};
+
 const ModalInput = ({ id, label, value, onChange, maxLength, placeholder, required = false, type = "text", inputMode, min = undefined, max = undefined, ...props }) => (
   <div className="form-group">
     <div className="label-row">
       <label htmlFor={id}>{label}</label>
       {maxLength && (
-        <span className={`char-count ${value?.length >= maxLength ? 'limit-reached' : ''}`}>
+        <span className={`char - count ${value?.length >= maxLength ? 'limit-reached' : ''} `}>
           {value?.length || 0}/{maxLength}
         </span>
       )}
@@ -40,7 +48,7 @@ const ModalTextarea = ({ id, label, value, onChange, maxLength, placeholder }) =
     <div className="label-row">
       <label htmlFor={id}>{label}</label>
       {maxLength && (
-        <span className={`char-count ${value?.length >= maxLength ? 'limit-reached' : ''}`}>
+        <span className={`char - count ${value?.length >= maxLength ? 'limit-reached' : ''} `}>
           {value?.length || 0}/{maxLength}
         </span>
       )}
@@ -123,8 +131,6 @@ const FilePreview = ({ file, type }) => {
   return null;
 };
 
-// ... (validateLevelValue stays same)
-
 export default function ChartModal({
   isOpen,
   mode,
@@ -136,13 +142,24 @@ export default function ChartModal({
   editData = null,
   limits = null
 }) {
-  const { t } = useLanguage();
+  const { t, loading: langLoading } = useLanguage();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
     return () => setMounted(false);
   }, []);
+
+  const checkFileLimit = (limit, callback) => (e) => {
+    if (e.target.files && e.target.files[0]) {
+      if (e.target.files[0].size > limit) {
+        alert(t('modal.fileTooLarge', `File size exceeds the limit of ${formatBytes(limit)}`));
+        e.target.value = "";
+        return;
+      }
+      callback(e);
+    }
+  };
 
   const visibilityOptions = [
     { value: "public", label: "Public", icon: Globe },
@@ -153,85 +170,87 @@ export default function ChartModal({
   const [currentlyPlaying, setCurrentlyPlaying] = useState(null);
   const audioRefs = useRef({});
 
-  const handlePlay = useCallback((audioId) => {
-    if (currentlyPlaying && currentlyPlaying !== audioId) {
-      const currentAudio = audioRefs.current[currentlyPlaying];
-      if (currentAudio) {
-        currentAudio.pause();
-        currentAudio.currentTime = 0;
+  const handlePlay = (id) => {
+    Object.keys(audioRefs.current).forEach(key => {
+      if (key !== id && audioRefs.current[key]) {
+        audioRefs.current[key].pause();
+        audioRefs.current[key].currentTime = 0;
       }
+    });
+
+    if (audioRefs.current[id]) {
+      audioRefs.current[id].play();
+      setCurrentlyPlaying(id);
     }
-    setCurrentlyPlaying(audioId);
-  }, [currentlyPlaying]);
+  };
 
-  const handleStop = useCallback((audioId) => {
-    setCurrentlyPlaying(null);
-  }, []);
-
-  const handleAudioRef = useCallback((audioId, ref) => {
-    audioRefs.current[audioId] = ref;
-  }, []);
-
-  const checkFileLimit = useCallback((limit, updateHandler) => (e) => {
-    if (e.target.files && e.target.files[0]) {
-      if (limit && e.target.files[0].size > limit) {
-        alert(`File is too large! Maximum size is ${formatBytes(limit)}.`);
-        e.target.value = "";
-        return;
-      }
+  const handleStop = (id) => {
+    if (audioRefs.current[id]) {
+      audioRefs.current[id].pause();
+      audioRefs.current[id].currentTime = 0;
     }
-    updateHandler(e);
-  }, []);
+    if (currentlyPlaying === id) {
+      setCurrentlyPlaying(null);
+    }
+  };
+
+  const handleAudioRef = (id, ref) => {
+    audioRefs.current[id] = ref;
+  };
 
   if (!isOpen || !mounted) return null;
 
   return createPortal(
-    <div className="modal-overlay">
-      <div className="edit-container">
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="edit-container" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <strong>
-            {mode === "edit"
-              ? (editData && editData.title ? `Edit: ${editData.title}` : "Edit Chart")
-              : "Upload New Chart"
-            }
-          </strong>
-          <button type="button" onClick={onClose} aria-label="Close" className="close-btn">✕</button>
+          <strong>{mode === 'upload' ? t('modal.upload', 'Upload Chart') : t('modal.edit', 'Edit Chart')}</strong>
+          <button className="close-btn" onClick={onClose}>
+            <XIcon size={20} />
+          </button>
         </div>
+
         <div className="modal-content">
-          {/* Edit Form */}
           <div className="meta-form" hidden={mode !== "edit"}>
             <form onSubmit={onSubmit}>
-              <ModalInput id="title_edit" label={t('modal.songTitle', 'Song Title')} value={form.title} onChange={onUpdate("title")} maxLength={limits?.text?.title || 50} placeholder="e.g. Freedom Dive" />
-              <ModalInput id="artists_edit" label={t('modal.artists', 'Artist(s)')} value={form.artists} onChange={onUpdate("artists")} maxLength={limits?.text?.artist || 50} placeholder="e.g. xi" />
-              <ModalInput id="author_edit" label={t('modal.charter', 'Charter Name')} value={form.author} onChange={onUpdate("author")} maxLength={limits?.text?.author || 50} placeholder="Your Name" />
+              <ModalInput id="title_edit" label={`${t('modal.songTitle', 'Song Title')} * `} value={form.title} onChange={onUpdate("title")} maxLength={limits?.text?.title || 50} placeholder="e.g. Bad Apple!!" required />
+              <ModalInput id="artists_edit" label={`${t('modal.artists', 'Artist(s)')} * `} value={form.artists} onChange={onUpdate("artists")} maxLength={limits?.text?.artist || 50} placeholder="e.g. Alstroemeria Records" required />
+              <ModalInput id="author_edit" label={`${t('modal.charter', 'Charter Name')} * `} value={form.author} onChange={onUpdate("author")} maxLength={limits?.text?.author || 50} placeholder="Your username" required />
 
               <ModalInput
                 id="rating_edit"
-                label={t('modal.level', 'Level')}
+                label={`${t('modal.level', 'Level')} * `}
                 value={form.rating}
                 onChange={(e) => {
-                  const value = validateLevelValue(e.target.value)
-                  onUpdate("rating")(value)
+                  let val = e.target.value;
+                  if (val.length > 3) val = val.slice(0, 3);
+                  onUpdate("rating")(val)
                 }}
-                placeholder="e.g. 25"
-                type="number"
+                placeholder="e.g. 28"
+                required type="number"
                 inputMode="numeric"
                 min={-999}
                 max={999}
               />
 
-              <ModalTextarea id="description_edit" label={t('modal.description', 'Description (Optional)')} value={form.description} onChange={onUpdate("description")} maxLength={limits?.text?.description || 1000} placeholder="Tell us about your chart..." />
+              <ModalTextarea id="description_edit" label={t('modal.description', 'Description (Optional)')} value={form.description} onChange={onUpdate("description")} maxLength={limits?.text?.description || 1000} placeholder="Any comments or details..." />
 
-              <ModalInput id="tags_edit" label={t('modal.tags', 'Tags (comma separated)')} value={form.tags} onChange={onUpdate("tags")} placeholder="e.g. Anime, Rhythm, Fast" />
+              <ModalInput id="tags_edit" label={t('modal.tags', 'Tags')} value={form.tags} onChange={onUpdate("tags")} placeholder="e.g. Touhou, Vocaloid" />
 
               <div className="form-group">
                 <label htmlFor="visibility_edit">{t('modal.visibility', 'Visibility')}</label>
-                <LiquidSelect
-                  value={form.visibility || "public"}
-                  onChange={(e) => onUpdate("visibility")(e)}
-                  options={visibilityOptions}
-                />
+                <div className="flex flex-col gap-2">
+                  <LiquidSelect
+                    value={form.visibility || "public"}
+                    onChange={(e) => onUpdate("visibility")(e)}
+                    options={visibilityOptions}
+                  />
+                </div>
               </div>
+
+
+
+
 
               <div className="form-group file-section">
                 <label htmlFor="jacket_edit">{t('modal.coverImage', 'Cover Image')} (.png/.jpg, max {limits?.files?.jacket ? formatBytes(limits.files.jacket) : '5MB'})</label>
@@ -509,29 +528,37 @@ export default function ChartModal({
               <button className="edit-save-btn" type="submit" disabled={loading}>
                 {loading ? t('modal.saving', 'Saving...') : t('modal.saveChanges', 'Save Changes')}
               </button>
-            </form>
-          </div>
+            </form >
+          </div >
 
           {/* Upload Form */}
-          <div className="upload-form" hidden={mode !== "upload"}>
+          < div className="upload-form" hidden={mode !== "upload"
+          }>
             {/* ... Reminders omitted (unchanged) ... */}
-            <div className="modal-reminders">
+            < div className="modal-reminders" >
               <h4>{t('modal.remindersTitle', '⚠️ Read before uploading:')}</h4>
-              <ul>
-                <li>{t('modal.reminder1')}</li>
-                <li>{t('modal.reminder2', { size: limits?.files?.audio ? formatBytes(limits.files.audio) : '20MB' })}</li>
-                <li>{t('modal.reminder3', { size: limits?.files?.chart ? formatBytes(limits.files.chart) : '10MB' })}</li>
-                <li>{t('modal.reminder4', { size: limits?.files?.jacket ? formatBytes(limits.files.jacket) : '5MB' })}</li>
+              <ul className="rules-list text-sm opacity-90 space-y-1">
+                <li>1. No slurs, racism, politics, heavily inappropriate things, advertising, etc.</li>
+                <li>2. No super-low quality shitposts (we allow some shitposts)</li>
+                <li>3. No public Arcaea or Taiko no Tatsujin songs</li>
+                <li>4. Do not abuse our services for the sake of abusing them</li>
+                <li>5. No official charts with minor modifications (All Flicks or All Traces are allowed occasionally only)</li>
+                <li>6. Use some common sense please</li>
+                <li>7. No incomplete charts</li>
               </ul>
-            </div>
+              <div className="mt-2 text-xs opacity-75 flex items-center gap-1">
+                <CheckCircleIcon size={12} />
+                <span>Rules 2, 3, 5, and 7 can be <strong>ignored if Unlisted</strong>.</span>
+              </div>
+            </div >
             <form onSubmit={onSubmit}>
-              <ModalInput id="title_up" label={`${t('modal.songTitle', 'Song Title')} *`} value={form.title} onChange={onUpdate("title")} maxLength={limits?.text?.title || 50} placeholder="e.g. Bad Apple!!" required />
-              <ModalInput id="artists_up" label={`${t('modal.artists', 'Artist(s)')} *`} value={form.artists} onChange={onUpdate("artists")} maxLength={limits?.text?.artist || 50} placeholder="e.g. Alstroemeria Records" required />
-              <ModalInput id="author_up" label={`${t('modal.charter', 'Charter Name')} *`} value={form.author} onChange={onUpdate("author")} maxLength={limits?.text?.author || 50} placeholder="Your username" required />
+              <ModalInput id="title_up" label={`${t('modal.songTitle', 'Song Title')} * `} value={form.title} onChange={onUpdate("title")} maxLength={limits?.text?.title || 50} placeholder="e.g. Bad Apple!!" required />
+              <ModalInput id="artists_up" label={`${t('modal.artists', 'Artist(s)')} * `} value={form.artists} onChange={onUpdate("artists")} maxLength={limits?.text?.artist || 50} placeholder="e.g. Alstroemeria Records" required />
+              <ModalInput id="author_up" label={`${t('modal.charter', 'Charter Name')} * `} value={form.author} onChange={onUpdate("author")} maxLength={limits?.text?.author || 50} placeholder="Your username" required />
 
               <ModalInput
                 id="rating_up"
-                label={`${t('modal.level', 'Level')} *`}
+                label={`${t('modal.level', 'Level')} * `}
                 value={form.rating}
                 onChange={(e) => {
                   let val = e.target.value;
@@ -551,15 +578,11 @@ export default function ChartModal({
 
               <div className="form-group">
                 <label htmlFor="visibility_up">{t('modal.visibility', 'Visibility')} *</label>
-                <select
-                  id="visibility_up"
+                <LiquidSelect
                   value={form.visibility || "public"}
-                  onChange={onUpdate("visibility")}
-                >
-                  <option value="public">{t('dashboard.public')}</option>
-                  <option value="unlisted">{t('dashboard.unlisted')}</option>
-                  <option value="private">{t('dashboard.private')}</option>
-                </select>
+                  onChange={(e) => onUpdate("visibility")(e)}
+                  options={visibilityOptions}
+                />
               </div>
 
               <div className="form-group file-section">
@@ -583,6 +606,8 @@ export default function ChartModal({
                   </div>
                 )}
               </div>
+
+
 
               <div className="form-group file-section">
                 <label htmlFor="bgm_up">{t('modal.audio', 'Audio')} (.mp3, max {limits?.files?.audio ? formatBytes(limits.files.audio) : '20MB'}) *</label>
@@ -683,10 +708,10 @@ export default function ChartModal({
                 )}
               </button>
             </form>
-          </div>
-        </div>
-      </div>
-    </div>,
+          </div >
+        </div >
+      </div >
+    </div >,
     document.body
   );
 }

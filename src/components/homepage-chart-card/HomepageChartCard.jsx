@@ -6,6 +6,7 @@ import "./HomepageChartCard.css";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { formatRelativeTime } from "../../utils/dateUtils";
 import LoadingImage from "../loading-image/LoadingImage";
+import { extractDominantColor, generateAuraColors } from "../../utils/colorUtils";
 
 export default function HomepageChartCard({
     chart,
@@ -35,6 +36,7 @@ export default function HomepageChartCard({
 
     const [isHovered, setIsHovered] = useState(false);
     const [isFocused, setIsFocused] = useState(false);
+    const [auraColors, setAuraColors] = useState(null);
     const localAudioRef = useRef(null);
 
     useEffect(() => {
@@ -53,6 +55,18 @@ export default function HomepageChartCard({
             }
         }
     }, [isPlaying]);
+
+    // Extract dominant color from cover for aura effect
+    useEffect(() => {
+        if (coverUrl && typeof window !== 'undefined') {
+            extractDominantColor(coverUrl)
+                .then(rgb => {
+                    const colors = generateAuraColors(rgb);
+                    setAuraColors(colors);
+                })
+                .catch(() => { });
+        }
+    }, [coverUrl]);
 
     // usage of initialCommentsCount is enough, no need to fetch individually to avoid N+1 problem
     const commentsCount = initialCommentsCount || 0;
@@ -90,11 +104,27 @@ export default function HomepageChartCard({
     return (
         <div
             className={`homepage-chart-card animate-fade-in-up ${isPlaying ? 'playing' : ''}`}
-            style={{ "--index": index, cursor: 'pointer' }}
+            style={{
+                "--index": index,
+                cursor: 'pointer',
+                ...(auraColors && {
+                    '--aura-primary': auraColors.primary,
+                    '--aura-secondary': auraColors.secondary,
+                    '--aura-tertiary': auraColors.tertiary
+                })
+            }}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
             onClick={handleCardClick}
         >
+            {/* Multi-layer aura effect */}
+            <div className="card-aura-container">
+                <div className="card-aura-layer-1" />
+                <div className="card-aura-layer-2" />
+                <div className="card-aura-layer-3" />
+                <div className="card-aura-sparks" />
+            </div>
+
             <div
                 className={`card-bg-blur ${isHovered || isFocused ? 'hovered' : ''}`}
                 style={{

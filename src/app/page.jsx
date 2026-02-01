@@ -208,7 +208,7 @@ function HomeContent() {
   const handleSearch = (e) => {
     e?.preventDefault();
     if (searchQuery.trim() === "Jadixexposed") {
-      window.location.href = "/Untitled1472_20260120224400.webp";
+      window.location.href = "/Untitled1472_20260120224400.jpg";
       return;
     }
     setPage(0);

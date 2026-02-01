@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import './AudioVisualizer.css';
+import { rgbToHsl } from '../../utils/colorUtils';
 
-export default function AudioVisualizer({ audioRef, isPlaying }) {
+export default function AudioVisualizer({ audioRef, isPlaying, dominantColor }) {
   const canvasRef = useRef(null);
   const animationRef = useRef(null);
   const [isVisible, setIsVisible] = useState(false);
@@ -60,16 +61,41 @@ export default function AudioVisualizer({ audioRef, isPlaying }) {
       for (let i = 0; i < dataArray.length; i++) {
         barHeight = (dataArray[i] / 255) * canvas.height * 0.8;
 
+        // Dynamic colors based on dominantColor prop
+        let colorBase, colorMid, colorTop;
+        if (dominantColor) {
+          const hsl = rgbToHsl(dominantColor.r, dominantColor.g, dominantColor.b);
+          colorBase = `hsl(${hsl.h}, ${Math.min(hsl.s + 20, 100)}%, ${Math.min(hsl.l + 10, 60)}%)`;
+          colorMid = `hsl(${(hsl.h + 30) % 360}, ${hsl.s}%, ${Math.min(hsl.l + 20, 70)}%)`;
+          colorTop = `hsl(${(hsl.h + 60) % 360}, ${Math.min(hsl.s + 10, 90)}%, ${Math.min(hsl.l + 30, 80)}%)`;
+        } else {
+          colorBase = '#4A90E2';
+          colorMid = '#7B68EE';
+          colorTop = '#FF6B6B';
+        }
+
         const gradient = ctx.createLinearGradient(0, canvas.height, 0, canvas.height - barHeight);
-        gradient.addColorStop(0, '#4A90E2');
-        gradient.addColorStop(0.5, '#7B68EE');
-        gradient.addColorStop(1, '#FF6B6B');
+        gradient.addColorStop(0, colorBase);
+        gradient.addColorStop(0.5, colorMid);
+        gradient.addColorStop(1, colorTop);
+
+        // Add glow effect for high bars
+        if (barHeight > canvas.height * 0.4) {
+          ctx.shadowBlur = 15;
+          ctx.shadowColor = colorMid;
+        } else {
+          ctx.shadowBlur = 5;
+          ctx.shadowColor = colorBase;
+        }
 
         ctx.fillStyle = gradient;
         ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
 
         x += barWidth + 1;
       }
+
+      // Reset shadow for next frame
+      ctx.shadowBlur = 0;
 
       animationRef.current = requestAnimationFrame(draw);
     };

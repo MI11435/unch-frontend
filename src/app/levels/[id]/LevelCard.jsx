@@ -387,16 +387,6 @@ export default function LevelCard({ level, SONOLUS_SERVER_URL }) {
 
               <div className="player-content-wrapper">
                 <div className="player-info">
-                  <div className={`player-disc-container ${isPlaying ? 'spinning' : ''}`}>
-                    <div className="disc-wrapper-small">
-                      <img
-                        src={level.thumbnail}
-                        className="level-cover-disc-small"
-                        alt=""
-                      />
-                      <div className="disc-center-hole-small"></div>
-                    </div>
-                  </div>
                   <div className="player-text">
                     <span className="player-title">{level.title}</span>
                   </div>

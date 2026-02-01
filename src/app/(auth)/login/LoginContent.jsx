@@ -108,7 +108,7 @@ export default function LoginContent() {
                 }
             } catch (e) {
             }
-        }, 1000);
+        }, 200);
 
         return () => clearInterval(interval);
     }, [isWaiting, externalLoginId, apiUrl, router]);

@@ -534,7 +534,7 @@ export default function Dashboard() {
         throw new Error(errMsg);
       }
 
-      if (editData.status?.toLowerCase() !== vis.toLowerCase()) {
+      if (editData.status?.toLowerCase() !== vis.toLowerCase() && vis !== 'SCHEDULED') {
         try {
           const visRes = await fetch(`${APILink}/api/charts/${editData.id}/visibility/`, {
             method: "PATCH",
@@ -604,12 +604,16 @@ export default function Dashboard() {
       if (result && (result.id || result.data?.id)) {
         const newId = result.id || result.data?.id;
         try {
-          const visRes = await fetch(`${APILink}/api/charts/${newId}/visibility/`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json", Authorization: session },
-            body: JSON.stringify({ status: vis }),
-          });
-          if (!visRes.ok) console.error("Initial visibility setting failed", await visRes.text());
+          // If status is SCHEDULED, we skip the visibility patch to avoid 422
+          // The initial status in 'chartData' likely defaults or is handled elsewhere
+          if (vis !== 'SCHEDULED') {
+            const visRes = await fetch(`${APILink}/api/charts/${newId}/visibility/`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json", Authorization: session },
+              body: JSON.stringify({ status: vis }),
+            });
+            if (!visRes.ok) console.error("Initial visibility setting failed", await visRes.text());
+          }
         } catch (e) {
           console.error("Failed to set initial visibility", e);
         }

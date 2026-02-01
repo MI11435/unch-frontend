@@ -796,6 +796,10 @@ body.light-mode .nav-links a.active {
         padding: 8px;
     }
 
+    body.light-mode .header-mobile-toggle button {
+        color: #0f172a;
+    }
+
     .header-container {
         padding: 0 16px;
     }
@@ -1400,6 +1404,76 @@ body:not(.light-mode) .bg-grid-pattern {
 
 body.light-mode.is-level-page .site-header {
     background: rgba(255, 255, 255, 0.3);
+}
+
+/* Light Mode Mobile Menu Overrides */
+body.light-mode .mobile-menu {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(25px);
+    -webkit-backdrop-filter: blur(25px);
+}
+
+body.light-mode .mobile-menu-header {
+    border-bottom: 1px solid rgba(15, 23, 42, 0.1);
+}
+
+body.light-mode .mobile-close-btn {
+    color: #0f172a;
+}
+
+body.light-mode .mobile-close-btn:hover {
+    background: rgba(15, 23, 42, 0.05);
+}
+
+body.light-mode .mobile-menu .nav-links a {
+    color: #1e293b;
+    background: rgba(15, 23, 42, 0.03);
+    border: 1px solid rgba(15, 23, 42, 0.05);
+}
+
+body.light-mode .mobile-menu .nav-links a:hover,
+body.light-mode .mobile-menu .nav-links a.active {
+    background: var(--primary);
+    color: white;
+}
+
+body.light-mode .mobile-menu-divider {
+    background: rgba(15, 23, 42, 0.1);
+}
+
+body.light-mode .mobile-control-row span {
+    color: #334155;
+}
+
+body.light-mode .mobile-menu-footer {
+    border-top: 1px solid rgba(15, 23, 42, 0.1);
+    color: #64748b;
+}
+
+body.light-mode .mobile-login-btn {
+    background: white;
+    border: 1px solid rgba(15, 23, 42, 0.1);
+    color: #0f172a;
+}
+
+body.light-mode .mobile-login-btn:hover {
+    background: var(--primary);
+    color: white;
+}
+
+body.light-mode .mobile-user-profile {
+    background: white;
+    border: 1px solid rgba(15, 23, 42, 0.1);
+    color: #0f172a;
+}
+
+body.light-mode .user-avatar.small {
+    background: #f1f5f9;
+    color: #0f172a;
+}
+
+body.light-mode .header-mobile-toggle button {
+    color: #0f172a;
 }
 
 body.light-mode.is-level-page .site-footer {

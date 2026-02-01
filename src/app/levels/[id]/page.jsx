@@ -27,7 +27,7 @@ async function fetchLevel(rawId) {
     artists: data.artists || 'Unknown Artist',
     rating: data.rating || 0,
     likes: data.likes || data.like_count || 0,
-    comments: data.comments || data.comments_count || 0,
+    comments: Number.isInteger(data.comments_count) ? data.comments_count : (Number.isInteger(data.comment_count) ? data.comment_count : (Array.isArray(data.comments) ? data.comments.length : 0)),
     createdAt: data.created_at || data.createdAt,
     asset_base_url: base,
 
@@ -52,7 +52,7 @@ export async function generateMetadata({ params }) {
   }
 
   const authorName = level.author ? level.author.split('#')[0] : 'Unknown';
-  const ogDescription = `Likes: ${level.likes} | Comments: ${level.comments} | 👤 ${authorName}\n\u200B\n${level.description}`;
+  const ogDescription = `Likes: ${level.likes} | Comments: ${level.comments} | 👤 ${authorName} | Description: ${level.description}`;
 
   return {
     title: `[${level.rating}] ${level.title}`,
