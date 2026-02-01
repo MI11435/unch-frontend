@@ -767,7 +767,7 @@ export default function Dashboard() {
               <div className="sidebar-section">
                 <div className="flex items-center justify-center gap-1 mb-3" onClick={() => setFiltersExpanded((p) => !p)}>
                   <div className="section-header">
-                    <h3>Filter Search</h3>
+                    <h3>{t("dashboard.filterSearch", "Filter Search")}</h3>
                   </div>
                   <div className="flex-1 py-1 px-0">
                     <div className="h-0.5 bg-cyan-100/50 w-full" />
@@ -878,7 +878,7 @@ export default function Dashboard() {
                       <label>{t("search.titleIncludes")}</label>
                       <input
                         type="text"
-                        placeholder="Search in titles..."
+                        placeholder={t("search.titleIncludesPlaceholder", "Search in titles...")}
                         value={titleIncludes}
                         onChange={(e) => setTitleIncludes(e.target.value)}
                         className="liquid-input"
@@ -889,7 +889,7 @@ export default function Dashboard() {
                       <label>{t("search.artistsIncludes")}</label>
                       <input
                         type="text"
-                        placeholder="Search in artists..."
+                        placeholder={t("search.artistsIncludesPlaceholder", "Search in artists...")}
                         value={artistsIncludes}
                         onChange={(e) => setArtistsIncludes(e.target.value)}
                         className="liquid-input"
@@ -900,7 +900,7 @@ export default function Dashboard() {
                       <label>{t("search.tags")}</label>
                       <input
                         type="text"
-                        placeholder="Comma-separated tags"
+                        placeholder={t("search.tagsPlaceholder", "Comma-separated tags")}
                         value={tags}
                         onChange={(e) => setTags(e.target.value)}
                         className="liquid-input"

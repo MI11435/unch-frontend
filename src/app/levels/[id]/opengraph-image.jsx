@@ -10,12 +10,12 @@ export default async function Image({ params }) {
     const cleanId = id.replace(/^UnCh-/, '');
     const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
-    let logoData = null;
+    let logoData = null; // Used for the new top-left image
     let mikuData = null;
     let starsData = null;
 
     try {
-        const logoUrl = new URL('../../../../public/636a8f1e76b38cb1b9eb0a3d88d7df6f.png', import.meta.url);
+        const logoUrl = new URL('../../../../public/Untitled1346_20251116091759.png', import.meta.url);
         const mikuUrl = new URL('../../../../public/mikudayo.png', import.meta.url);
         const starsUrl = new URL('../../../../public/stars.png', import.meta.url);
 
@@ -129,7 +129,7 @@ export default async function Image({ params }) {
     // Border Color - White
     const BORDER_COLOR = 'rgba(255, 255, 255, 0.7)';
     const BORDER_THICKNESS = 2; // Thinner border
-    const CORNER_RADIUS = 12; // Reduced curve (Requested: "little curve")
+    const CORNER_RADIUS = 12; // Reduced curve
 
     // L-Shape Dimensions
     const H_ARM_LEN = 440;
@@ -253,6 +253,22 @@ export default async function Image({ params }) {
                             width: 200,
                             height: 28,
                             objectFit: 'contain'
+                        }}
+                    />
+                )}
+
+                {/* Top Left Logo */}
+                {logoData && (
+                    <img
+                        src={logoData}
+                        style={{
+                            position: 'absolute',
+                            top: FRAME_MARGIN + 20,
+                            left: FRAME_MARGIN + 35,
+                            width: 80,
+                            height: 80,
+                            objectFit: 'contain',
+                            opacity: 0.45
                         }}
                     />
                 )}
