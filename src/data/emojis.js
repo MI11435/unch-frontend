@@ -7,6 +7,9 @@ export const emojis = {
     },
     "yaminabe": {
         "image": "yaminabe.webp"
+    },
+    "os_uweh": {
+        "image": "uweh.webp"
     }
 };
 
