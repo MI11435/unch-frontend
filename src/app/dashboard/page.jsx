@@ -18,6 +18,7 @@ import {
   ArrowDown,
 } from "lucide-react";
 import PaginationControls from "../../components/pagination-controls/PaginationControls";
+import FormattedText from "../../components/formatted-text/FormattedText";
 import { useUser } from "../../contexts/UserContext";
 import { useRouter } from "next/navigation";
 import { useLanguage } from "../../contexts/LanguageContext";
@@ -534,7 +535,7 @@ export default function Dashboard() {
         throw new Error(errMsg);
       }
 
-      if (editData.status?.toLowerCase() !== vis.toLowerCase() && vis !== 'SCHEDULED') {
+      if (editData.status?.toLowerCase() !== vis.toLowerCase()) {
         try {
           const visRes = await fetch(`${APILink}/api/charts/${editData.id}/visibility/`, {
             method: "PATCH",
@@ -604,16 +605,12 @@ export default function Dashboard() {
       if (result && (result.id || result.data?.id)) {
         const newId = result.id || result.data?.id;
         try {
-          // If status is SCHEDULED, we skip the visibility patch to avoid 422
-          // The initial status in 'chartData' likely defaults or is handled elsewhere
-          if (vis !== 'SCHEDULED') {
-            const visRes = await fetch(`${APILink}/api/charts/${newId}/visibility/`, {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json", Authorization: session },
-              body: JSON.stringify({ status: vis }),
-            });
-            if (!visRes.ok) console.error("Initial visibility setting failed", await visRes.text());
-          }
+          const visRes = await fetch(`${APILink}/api/charts/${newId}/visibility/`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", Authorization: session },
+            body: JSON.stringify({ status: vis }),
+          });
+          if (!visRes.ok) console.error("Initial visibility setting failed", await visRes.text());
         } catch (e) {
           console.error("Failed to set initial visibility", e);
         }
@@ -767,7 +764,7 @@ export default function Dashboard() {
               <div className="sidebar-section">
                 <div className="flex items-center justify-center gap-1 mb-3" onClick={() => setFiltersExpanded((p) => !p)}>
                   <div className="section-header">
-                    <h3>{t("dashboard.filterSearch", "Filter Search")}</h3>
+                    <h3>Filter Search</h3>
                   </div>
                   <div className="flex-1 py-1 px-0">
                     <div className="h-0.5 bg-cyan-100/50 w-full" />
@@ -842,10 +839,9 @@ export default function Dashboard() {
                       <input
                         type="number"
                         placeholder={t("search.minRatingPlaceholder")}
-                        min="1"
-                        max="99"
                         value={minRating}
                         onChange={(e) => setMinRating(e.target.value)}
+                        onWheel={(e) => e.target.blur()}
                         className="liquid-input"
                       />
                     </div>
@@ -855,10 +851,9 @@ export default function Dashboard() {
                       <input
                         type="number"
                         placeholder={t("search.maxRatingPlaceholder")}
-                        min="1"
-                        max="99"
                         value={maxRating}
                         onChange={(e) => setMaxRating(e.target.value)}
+                        onWheel={(e) => e.target.blur()}
                         className="liquid-input"
                       />
                     </div>
@@ -878,7 +873,7 @@ export default function Dashboard() {
                       <label>{t("search.titleIncludes")}</label>
                       <input
                         type="text"
-                        placeholder={t("search.titleIncludesPlaceholder", "Search in titles...")}
+                        placeholder="Search in titles..."
                         value={titleIncludes}
                         onChange={(e) => setTitleIncludes(e.target.value)}
                         className="liquid-input"
@@ -889,7 +884,7 @@ export default function Dashboard() {
                       <label>{t("search.artistsIncludes")}</label>
                       <input
                         type="text"
-                        placeholder={t("search.artistsIncludesPlaceholder", "Search in artists...")}
+                        placeholder="Search in artists..."
                         value={artistsIncludes}
                         onChange={(e) => setArtistsIncludes(e.target.value)}
                         className="liquid-input"
@@ -900,7 +895,7 @@ export default function Dashboard() {
                       <label>{t("search.tags")}</label>
                       <input
                         type="text"
-                        placeholder={t("search.tagsPlaceholder", "Comma-separated tags")}
+                        placeholder="Comma-separated tags"
                         value={tags}
                         onChange={(e) => setTags(e.target.value)}
                         className="liquid-input"
@@ -958,7 +953,7 @@ export default function Dashboard() {
                         <div className="card-info">
                           <div className="info-header">
                             <div className="flex items-center justify-start gap-2">
-                              <h3 title={post.title}>{post.title}</h3>
+                              <h3 title={post.title}><FormattedText text={post.title} /></h3>
                               <span title="Rating" className="rating-badge text-xs" style={{ display: "flex", alignItems: "center", gap: "4px" }}>
                                 Lv. {post.rating}
                               </span>
@@ -977,7 +972,7 @@ export default function Dashboard() {
 
                               <div
                                 className={`action-dropdown ${activeMenu === post.id ? "active" : ""}`}
-                                style={{ display: activeMenu === post.id ? "flex" : "none" }}
+                                style={{ display: activeMenu === post.id ? "flex" : "none", minWidth: "max-content", right: 0 }}
                                 onClick={(e) => e.stopPropagation()}
                               >
                                 {(post.status === "PUBLIC" || post.status === "UNLISTED") && (
@@ -990,6 +985,12 @@ export default function Dashboard() {
                                     <button onClick={() => openEdit(post)}>
                                       <Pencil size={14} style={{ marginRight: "8px" }} /> {t("dashboard.edit", "Edit")}
                                     </button>
+                                    <button onClick={() => {
+                                      setActiveMenu(null);
+                                      openScheduleMenu(post);
+                                    }}>
+                                      <Clock size={14} style={{ marginRight: "8px" }} /> {t("dashboard.schedule", "Schedule")}
+                                    </button>
                                     <button className="text-red" onClick={() => handleDelete(post)}>
                                       <Trash2 size={14} style={{ marginRight: "8px" }} /> {t("dashboard.delete", "Delete")}
                                     </button>
@@ -999,7 +1000,7 @@ export default function Dashboard() {
                             </div>
                           </div>
 
-                          <span className="author-name">{post.author_field || post.author || "Unknown"}</span>
+                          <span className="author-name"><FormattedText text={post.author_field || post.author || "Unknown"} /></span>
                           {post.scheduled_publish && (
                             <div
                               className="scheduled-badge"
@@ -1066,21 +1067,8 @@ export default function Dashboard() {
 
                               {scheduleMenuPostId === post.id && (
                                 <div
+                                  className="schedule-popover"
                                   onClick={(e) => e.stopPropagation()}
-                                  style={{
-                                    position: "absolute",
-                                    right: 0,
-                                    top: "calc(100% + 8px)",
-                                    zIndex: 50,
-                                    background: "rgba(20,20,20,0.95)",
-                                    border: "1px solid rgba(255,255,255,0.12)",
-                                    borderRadius: "12px",
-                                    padding: "10px",
-                                    minWidth: "280px",
-                                    display: "flex",
-                                    flexDirection: "column",
-                                    gap: "10px",
-                                  }}
                                 >
                                   <div className="text-xs opacity-75">{t("dashboard.publicOptions", "Public options")}</div>
 

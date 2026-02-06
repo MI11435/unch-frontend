@@ -7,6 +7,26 @@
     "logout": "Logout",
     "profile": "Profile"
   },
+  "userProfile": {
+    "back": "Back",
+    "charts": "Charts",
+    "noCharts": "This User hasn't made any charts yet :<",
+    "stats": "Chart Statistics",
+    "totalCharts": "Charts",
+    "charts_singular": "{1} Chart",
+    "charts_plural": "{1} Charts",
+    "totalLikes": "Likes",
+    "likes_singular": "{1} Like",
+    "likes_plural": "{1} Likes",
+    "totalComments": "Comments",
+    "comments_singular": "{1} Comment",
+    "comments_plural": "{1} Comments",
+    "owner": "Owner",
+    "admin": "Admin",
+    "mod": "Mod",
+    "moderator": "Moderator",
+    "administrator": "Administrator"
+  },
   "home": {
     "newCharts": "New Charts",
     "trendingCharts": "Trending Charts",
@@ -97,7 +117,13 @@
     "failedToCopy": "Failed to copy",
     "embedCopied": "Embed code copied!",
     "poweredBy": "Powered by",
-    "last7Days": "Last 7 Days"
+    "last7Days": "Last 7 Days",
+    "premieringIn": "Scheduled to release in",
+    "viewFullCountdown": "View Full-Screen Countdown",
+    "days": "Days",
+    "hours": "Hours",
+    "mins": "Mins",
+    "secs": "Secs"
   },
   "viewAll": {
     "filterPlaceholder": "Filter charts...",

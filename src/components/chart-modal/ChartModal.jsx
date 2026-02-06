@@ -8,6 +8,7 @@ import AudioControls from "../audio-control/AudioControls";
 import AudioVisualizer from "../audio-visualizer/AudioVisualizer";
 import LiquidSelect from "../liquid-select/LiquidSelect";
 import { formatBytes } from "../../utils/byteUtils";
+import FormattedText from "../formatted-text/FormattedText";
 
 // Helper function to validate level input
 const validateLevelValue = (val) => {
@@ -76,27 +77,12 @@ const FilePreview = ({ file, type }) => {
     }
     const objectUrl = URL.createObjectURL(file);
     setUrl(objectUrl);
-    return () => URL.revokeObjectURL(objectUrl);
-  }, [file]);
-
-  const handlePlay = () => {
-    if (audioRef.current) {
-      if (isPlaying) {
-        audioRef.current.pause();
-      } else {
-        audioRef.current.play();
-      }
-      setIsPlaying(!isPlaying);
-    }
-  };
-
-  const handleStop = () => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
+    return () => {
+      URL.revokeObjectURL(objectUrl);
+      // Reset playing state when file changes
       setIsPlaying(false);
-    }
-  };
+    };
+  }, [file]);
 
   if (!url) return null;
 
@@ -113,13 +99,13 @@ const FilePreview = ({ file, type }) => {
       <div className="audio-preview-container" style={{ width: '100%', marginTop: '8px' }}>
         <AudioControls
           bgmUrl={url}
-          onPlay={handlePlay}
-          onStop={handleStop}
+          onPlay={() => setIsPlaying(true)}
+          onStop={() => setIsPlaying(false)}
           isPlaying={isPlaying}
           isActive={isPlaying}
           audioRef={(ref) => { audioRef.current = ref; }}
         />
-        {isPlaying && (
+        {isPlaying && audioRef.current && (
           <AudioVisualizer
             audioRef={audioRef.current}
             isPlaying={isPlaying}
@@ -229,8 +215,7 @@ export default function ChartModal({
                 placeholder="e.g. 28"
                 required type="number"
                 inputMode="numeric"
-                min={-999}
-                max={999}
+                onWheel={(e) => e.target.blur()}
               />
 
               <ModalTextarea id="description_edit" label={t('modal.description', 'Description (Optional)')} value={form.description} onChange={onUpdate("description")} maxLength={limits?.text?.description || 1000} placeholder="Any comments or details..." />
@@ -554,7 +539,15 @@ export default function ChartModal({
             <form onSubmit={onSubmit}>
               <ModalInput id="title_up" label={`${t('modal.songTitle', 'Song Title')} * `} value={form.title} onChange={onUpdate("title")} maxLength={limits?.text?.title || 50} placeholder="e.g. Bad Apple!!" required />
               <ModalInput id="artists_up" label={`${t('modal.artists', 'Artist(s)')} * `} value={form.artists} onChange={onUpdate("artists")} maxLength={limits?.text?.artist || 50} placeholder="e.g. Alstroemeria Records" required />
-              <ModalInput id="author_up" label={`${t('modal.charter', 'Charter Name')} * `} value={form.author} onChange={onUpdate("author")} maxLength={limits?.text?.author || 50} placeholder="Your username" required />
+              <div className="preview-text text-sm text-gray-400 mt-1">
+                Preview: <FormattedText text={form.artists || "Artist Name"} />
+              </div>
+              <div className="form-group">
+                <ModalInput id="author_up" label={`${t('modal.charter', 'Charter Name')} * `} value={form.author} onChange={onUpdate("author")} maxLength={limits?.text?.author || 50} placeholder="Your username" required />
+                <div className="preview-text text-sm text-gray-400 mt-1">
+                  Preview: <FormattedText text={form.author || "Charter Name"} />
+                </div>
+              </div>
 
               <ModalInput
                 id="rating_up"
@@ -568,8 +561,7 @@ export default function ChartModal({
                 placeholder="e.g. 28"
                 required type="number"
                 inputMode="numeric"
-                min={-999}
-                max={999}
+                onWheel={(e) => e.target.blur()}
               />
 
               <ModalTextarea id="description_up" label={t('modal.description', 'Description (Optional)')} value={form.description} onChange={onUpdate("description")} maxLength={limits?.text?.description || 1000} placeholder="Any comments or details..." />

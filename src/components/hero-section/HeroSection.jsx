@@ -37,8 +37,7 @@ export default function HeroSection({ posts = [] }) {
         fetchCounts();
     }, [posts]);
 
-    // Auto-scroll disabled by user request
-    /*
+    // Auto-scroll carousel
     useEffect(() => {
         if (posts.length <= 1) return;
         const interval = setInterval(() => {
@@ -46,7 +45,6 @@ export default function HeroSection({ posts = [] }) {
         }, 6000);
         return () => clearInterval(interval);
     }, [posts.length]);
-    */
 
     if (!posts || posts.length === 0) return null;
 
@@ -141,7 +139,7 @@ export default function HeroSection({ posts = [] }) {
                     ))}
                 </div>
             </div>
-            <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-10 py-2 px-4 rounded-full flex items-center justify-center gap-2 text-sm bg-sky-200/10 select-none animate-bounce">
+            <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-10 py-2 px-4 rounded-full flex items-center justify-center gap-2 text-sm bg-sky-200/10 select-none">
                 <ArrowDown className="size-5" />
                 <span>More</span>
             </div>

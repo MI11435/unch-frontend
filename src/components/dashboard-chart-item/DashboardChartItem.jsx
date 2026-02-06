@@ -10,6 +10,7 @@ import {
   Pencil,
   Trash2,
   Eye,
+  Clock,
 } from "lucide-react";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { formatRelativeTime } from "../../utils/dateUtils";
@@ -229,6 +230,7 @@ const DashboardChartItem = memo(
           {/* Optional: show schedule info */}
           {scheduledLabel && (
             <div className="text-xs opacity-75" style={{ marginTop: "6px" }}>
+              <Clock size={12} style={{ display: "inline", marginRight: "4px" }} />
               {t("dashboard.scheduledFor", "Scheduled for")}: {scheduledLabel}
             </div>
           )}

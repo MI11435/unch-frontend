@@ -22,6 +22,7 @@ function HomeContent() {
   const { t } = useLanguage();
   const { sonolusUser } = useUser();
   const searchParams = useSearchParams();
+  const router = useRouter();
 
   const [viewMode, setViewMode] = useState("home");
 
@@ -207,8 +208,8 @@ function HomeContent() {
 
   const handleSearch = (e) => {
     e?.preventDefault();
-    if (searchQuery.trim() === "Jadixexposed") {
-      window.location.href = "/Untitled1472_20260120224400.jpg";
+    if (searchQuery.trim().toLowerCase() === "jadixexposed") {
+      router.push("/?view=jadixexposed-egg-2026");
       return;
     }
     setPage(0);
@@ -262,7 +263,10 @@ function HomeContent() {
   const viewParam = searchParams.get('view');
 
   useEffect(() => {
-    if (viewParam === 'search') {
+    if (viewParam === 'jadixexposed-egg-2026') {
+      setViewMode('jadixexposed-egg-2026');
+      setLoading(false);
+    } else if (viewParam === 'search') {
       setViewMode('search');
       if (viewMode !== 'search') {
         setLoading(true);
@@ -349,6 +353,166 @@ function HomeContent() {
               </button>
             </Link>
           </div>
+        </div>
+      ) : viewMode === 'jadixexposed-egg-2026' ? (
+        <div className="easter-egg-content animate-fade-in" style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'flex-start',
+          minHeight: '100vh',
+          padding: '120px 20px 60px',
+          gap: '30px',
+          background: 'linear-gradient(135deg, #0f0f1a 0%, #1a0a2e 50%, #0f0f1a 100%)'
+        }}>
+          <h1 style={{
+            fontSize: '2rem',
+            color: '#fff',
+            textAlign: 'center',
+            textShadow: '0 0 20px rgba(255, 100, 200, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '12px',
+            flexWrap: 'wrap',
+            margin: 0
+          }}>
+            <img src="/Untitled1472_20260120224400.jpg" alt="" style={{ width: '40px', height: '40px', borderRadius: '8px', objectFit: 'cover' }} />
+            You found the secret!
+            <img src="/Untitled1472_20260120224400.jpg" alt="" style={{ width: '40px', height: '40px', borderRadius: '8px', objectFit: 'cover' }} />
+          </h1>
+
+          <p style={{ color: 'rgba(255,255,255,0.7)', textAlign: 'center', maxWidth: '600px', margin: 0 }}>
+            Congratulations on discovering the Jadixexposed Easter Egg! Here are some exclusive images:
+          </p>
+
+          <div style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '24px',
+            justifyContent: 'center',
+            alignItems: 'flex-start',
+            maxWidth: '900px',
+            width: '100%'
+          }}>
+            <div style={{
+              background: 'rgba(255,255,255,0.05)',
+              borderRadius: '16px',
+              padding: '16px',
+              border: '1px solid rgba(255,255,255,0.1)',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+              flex: '1 1 300px',
+              maxWidth: '400px'
+            }}>
+              <img
+                src="/Untitled1472_20260120224400.jpg"
+                alt="Jadixexposed"
+                style={{
+                  width: '100%',
+                  borderRadius: '12px',
+                  display: 'block'
+                }}
+              />
+              <p style={{ color: '#fff', textAlign: 'center', marginTop: '12px', marginBottom: 0, fontSize: '0.9rem' }}>
+                Jadixexposed Original, a.k.a Jadix in a maid costume exposed by his muscular man
+              </p>
+            </div>
+            <div style={{
+              background: 'rgba(255,255,255,0.05)',
+              borderRadius: '16px',
+              padding: '16px',
+              border: '1px solid rgba(255,255,255,0.1)',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+              flex: '1 1 300px',
+              maxWidth: '400px'
+            }}>
+              <img
+                src="/reiyunlover.png"
+                alt="Reiyunlover"
+                style={{
+                  width: '100%',
+                  borderRadius: '12px',
+                  display: 'block'
+                }}
+              />
+              <p style={{ color: '#fff', textAlign: 'center', marginTop: '12px', marginBottom: 0, fontSize: '0.9rem' }}>
+                Reiyunlover
+              </p>
+            </div>
+          </div>
+
+          <div style={{
+            display: 'flex',
+            gap: '20px',
+            flexWrap: 'wrap',
+            justifyContent: 'center',
+            width: '100%',
+            maxWidth: '900px',
+            marginTop: '10px'
+          }}>
+            {/* ReiyuN Note */}
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.15) 0%, rgba(56, 189, 248, 0.15) 100%)',
+              border: '1px solid rgba(168, 85, 247, 0.3)',
+              borderRadius: '16px',
+              padding: '20px 24px',
+              flex: '1 1 300px',
+              maxWidth: '600px'
+            }}>
+              <p style={{
+                color: '#fff',
+                fontSize: '0.95rem',
+                lineHeight: '1.6',
+                margin: 0,
+                fontStyle: 'italic',
+                textAlign: 'center'
+              }}>
+                "Hai hai! ReiyuN here~ Congratulations for finding this silly page about Jadix! I do lots of abominations so expect more things to pile up here whenever Jadix gets punished by me since I occasionally draw something for him whenever he does something stupid. That's all bai bai!!"
+                <br /><br />
+                <span style={{ fontWeight: 'bold', color: '#a855f7' }}>-ReiyuN</span>
+              </p>
+            </div>
+
+            {/* Jadix Note */}
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(249, 115, 22, 0.15) 100%)',
+              border: '1px solid rgba(239, 68, 68, 0.3)',
+              borderRadius: '16px',
+              padding: '20px 24px',
+              flex: '1 1 300px',
+              maxWidth: '600px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <p style={{
+                color: '#fff',
+                fontSize: '0.95rem',
+                lineHeight: '1.6',
+                margin: 0,
+                fontStyle: 'italic',
+                textAlign: 'center'
+              }}>
+                “if you see this, theres a missile coming to your house right now”
+                <br /><br />
+                <span style={{ fontWeight: 'bold', color: '#ef4444' }}>-Jadix</span>
+              </p>
+            </div>
+          </div>
+
+          <Link href="/" style={{
+            marginTop: '10px',
+            padding: '12px 24px',
+            background: 'linear-gradient(135deg, #38bdf8 0%, #a855f7 100%)',
+            borderRadius: '8px',
+            color: '#fff',
+            textDecoration: 'none',
+            fontWeight: 'bold',
+            transition: 'transform 0.2s, box-shadow 0.2s',
+            boxShadow: '0 4px 15px rgba(56, 189, 248, 0.3)'
+          }}>
+            ← Back to Home
+          </Link>
         </div>
       ) : (
         <div className="search-content animate-fade-in" style={{ width: '100%', maxWidth: '1000px', margin: '120px auto 0' }}>

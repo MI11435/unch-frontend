@@ -37,6 +37,10 @@ async function fetchLevel(rawId) {
 
     backgroundUrl: buildAssetUrl(data.background_file_hash || (data.background && data.background.hash)),
     backgroundV3Url: buildAssetUrl(data.background_v3_file_hash || (data.backgroundV3 && data.backgroundV3.hash)),
+
+    // Scheduling data
+    scheduled_publish: data.scheduled_publish || null,
+    status: data.status || 'PUBLIC',
   };
 }
 
@@ -52,20 +56,54 @@ export async function generateMetadata({ params }) {
   }
 
   const authorName = level.author ? level.author.split('#')[0] : 'Unknown';
-  const ogDescription = `Likes: ${level.likes} | Comments: ${level.comments} | 👤 ${authorName} | Description: ${level.description}`;
+
+  // Format date for footer
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    return d.toLocaleString('en-US', {
+      month: 'numeric',
+      day: 'numeric',
+      year: '2-digit',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
+  };
+  const publishedDate = formatDate(level.createdAt);
+
+  // Build structured description exactly as user requested
+  // {description}
+  // Comments: X | Likes: Y
+  const statsLine = `💬 Comments: ${level.comments} | ❤️ Likes: ${level.likes}`;
+  // Strip emojis from description for metadata (remove :emoji:)
+  const rawDescription = level.description || '';
+  const cleanDescription = rawDescription.replace(/:[a-zA-Z0-9_]+:/g, '').trim();
+  const descriptionText = cleanDescription.slice(0, 300);
+
+  const embedDescription = [
+    descriptionText,
+    '',
+    statsLine
+  ].filter(line => line !== undefined).join('\n');
 
   return {
-    title: `[${level.rating}] ${level.title}`,
-    description: ogDescription,
+    title: `[Lv. ${level.rating}] ${level.title} - ${level.artists}`,
+    description: embedDescription,
     openGraph: {
-      title: `[${level.rating}] ${level.title}`,
-      description: ogDescription,
-      site_name: `UntitledCharts - ${level.author}`,
+      title: `${level.title}`,
+      description: embedDescription,
+      siteName: `UntitledCharts • ${publishedDate}`,
+      type: 'music.song',
     },
     twitter: {
       card: 'summary_large_image',
-      title: `[${level.rating}] ${level.title}`,
-      description: ogDescription,
+      title: `[Lv. ${level.rating}] ${level.title}`,
+      description: embedDescription,
+      creator: `@${authorName}`,
+    },
+    other: {
+      'theme-color': '#38bdf8',
     },
   };
 }
@@ -74,12 +112,12 @@ export async function generateMetadata({ params }) {
 export default async function LevelPage({ params }) {
   const { id } = await params;
 
-  let level;
+  let level = null;
   try {
     level = await fetchLevel(id);
-  } catch {
-    notFound();
+  } catch (e) {
+    // Consolas.log("Server fetch failed, defaulting to client-side fetch");
   }
 
-  return <LevelCard level={level} SONOLUS_SERVER_URL={SONOLUS_SERVER_URL} />;
+  return <LevelCard initialLevel={level} id={id} SONOLUS_SERVER_URL={SONOLUS_SERVER_URL} />;
 }

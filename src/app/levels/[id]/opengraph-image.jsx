@@ -10,27 +10,103 @@ export default async function Image({ params }) {
     const cleanId = id.replace(/^UnCh-/, '');
     const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
-    let logoData = null; // Used for the new top-left image
+    // Initialize data containers
+    let logoData = null;
     let mikuData = null;
     let starsData = null;
+    const emojiDataMap = {};
 
+    // Parallelize ALL asset fetching (Core assets + Emojis)
+    // This ensures we wait for everything without sequential bottlenecks
     try {
-        const logoUrl = new URL('../../../../public/Untitled1346_20251116091759.png', import.meta.url);
-        const mikuUrl = new URL('../../../../public/mikudayo.png', import.meta.url);
-        const starsUrl = new URL('../../../../public/stars.png', import.meta.url);
+        // 1. Prepare Core Asset Promises
+        // Use absolute URL for public assets in Edge runtime to avoid relative path issues
+        // We can reuse the API_URL or APP_URL logic, but for public files, constructing a full URL is safest.
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
-        const [logoRes, mikuRes, starsRes] = await Promise.all([
-            fetch(logoUrl),
-            fetch(mikuUrl),
-            fetch(starsUrl)
+        const logoUrl = `${appUrl}/636a8f1e76b38cb1b9eb0a3d88d7df6f.png`;
+        const mikuUrl = `${appUrl}/mikudayo.png`;
+        const starsUrl = `${appUrl}/stars.png`;
+
+        const coreAssetsPromise = Promise.all([
+            fetch(logoUrl).then(res => res.ok ? res.arrayBuffer() : null).catch(() => null),
+            fetch(mikuUrl).then(res => res.ok ? res.arrayBuffer() : null).catch(() => null),
+            fetch(starsUrl).then(res => res.ok ? res.arrayBuffer() : null).catch(() => null)
         ]);
 
-        if (logoRes.ok) logoData = await logoRes.arrayBuffer();
-        if (mikuRes.ok) mikuData = await mikuRes.arrayBuffer();
-        if (starsRes.ok) starsData = await starsRes.arrayBuffer();
+        // 2. Prepare Emoji Promises
+        // Import emojis dynamically or use the static import (dynamic is fine here)
+        const { emojis } = await import('../../../../src/data/emojis');
+
+        const emojiPromises = Object.entries(emojis).map(async ([name, config]) => {
+            try {
+                let imgUrl;
+                if (config.image.startsWith('http')) {
+                    imgUrl = config.image;
+                } else {
+                    imgUrl = new URL(`../../../../public/emojis/${config.image}`, import.meta.url);
+                }
+
+                const imgRes = await fetch(imgUrl);
+                if (imgRes.ok) {
+                    const buffer = await imgRes.arrayBuffer();
+                    const bytes = new Uint8Array(buffer);
+                    let mimeType = 'image/png';
+                    if (bytes[0] === 0xFF && bytes[1] === 0xD8) mimeType = 'image/jpeg';
+                    else if (bytes[0] === 0x47 && bytes[1] === 0x49) mimeType = 'image/gif';
+                    else if (bytes[0] === 0x52 && bytes[1] === 0x49) mimeType = 'image/webp';
+
+                    let binary = '';
+                    for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+                    emojiDataMap[name] = `data:${mimeType};base64,${btoa(binary)}`;
+                } else {
+                    console.error(`Failed to fetch emoji image: ${imgUrl} - ${imgRes.status}`);
+                }
+            } catch (e) {
+                console.error("Emoji fetch error:", e);
+            }
+        });
+
+        // 3. Await ALL fetches together
+        const [coreAssetBuffers] = await Promise.all([
+            coreAssetsPromise,
+            Promise.all(emojiPromises) // This promise resolves after all emoji fetches and map updates are done
+        ]);
+
+        [logoData, mikuData, starsData] = coreAssetBuffers;
+
     } catch (e) {
-        console.error(e);
+        console.error("Asset loading error:", e);
     }
+
+    // Helper to render text with emojis
+    const renderTextWithEmojis = (text, fontSize = 24) => {
+        if (!text) return null;
+        const emojiKeys = Object.keys(emojiDataMap);
+        if (emojiKeys.length === 0) return text;
+
+        const pattern = new RegExp(`(${emojiKeys.map(k => `:${k}:`).join('|')})`, 'g');
+        const parts = text.split(pattern);
+
+        return parts.map((part, i) => {
+            const match = part.match(/^:([^:]+):$/);
+            if (match && emojiDataMap[match[1]]) {
+                return (
+                    <img
+                        key={i}
+                        src={emojiDataMap[match[1]]}
+                        width={fontSize * 1.2}
+                        height={fontSize * 1.2}
+                        style={{
+                            verticalAlign: 'middle',
+                            margin: '0 4px'
+                        }}
+                    />
+                );
+            }
+            return part;
+        });
+    };
 
     let levelData = null;
     let assetBaseUrl = null;
@@ -129,7 +205,7 @@ export default async function Image({ params }) {
     // Border Color - White
     const BORDER_COLOR = 'rgba(255, 255, 255, 0.7)';
     const BORDER_THICKNESS = 2; // Thinner border
-    const CORNER_RADIUS = 12; // Reduced curve
+    const CORNER_RADIUS = 12; // Reduced curve 
 
     // L-Shape Dimensions
     const H_ARM_LEN = 440;
@@ -257,22 +333,6 @@ export default async function Image({ params }) {
                     />
                 )}
 
-                {/* Top Left Logo */}
-                {logoData && (
-                    <img
-                        src={logoData}
-                        style={{
-                            position: 'absolute',
-                            top: FRAME_MARGIN + 20,
-                            left: FRAME_MARGIN + 35,
-                            width: 80,
-                            height: 80,
-                            objectFit: 'contain',
-                            opacity: 0.45
-                        }}
-                    />
-                )}
-
                 {/* Staff Pick Badge */}
                 {isStaffPick && (
                     <div style={{
@@ -343,18 +403,18 @@ export default async function Image({ params }) {
                         </div>
 
                         {/* Title */}
-                        <div style={{ fontSize: 60, fontWeight: 700, color: 'white', lineHeight: 1.05, marginBottom: 16, display: 'flex', textShadow: '0 4px 12px rgba(0,0,0,0.4)' }}>
-                            {(levelData.title || 'Untitled').slice(0, 28)}
+                        <div style={{ fontSize: 60, fontWeight: 700, color: 'white', lineHeight: 1.05, marginBottom: 16, display: 'flex', alignItems: 'center', flexWrap: 'wrap', textShadow: '0 4px 12px rgba(0,0,0,0.4)' }}>
+                            {renderTextWithEmojis((levelData.title || 'Untitled').slice(0, 28), 60)}
                         </div>
 
                         {/* Artist */}
-                        <div style={{ fontSize: 30, color: '#f1f5f9', marginBottom: 8, display: 'flex' }}>
-                            {(levelData.artists || 'Unknown Artist').slice(0, 36)}
+                        <div style={{ fontSize: 30, color: '#f1f5f9', marginBottom: 8, display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
+                            {renderTextWithEmojis((levelData.artists || 'Unknown Artist').slice(0, 36), 30)}
                         </div>
 
                         {/* Charter */}
-                        <div style={{ fontSize: 24, color: '#94a3b8', display: 'flex', marginBottom: 28 }}>
-                            Charted by {(levelData.author_full || levelData.author || 'Unknown').split('#')[0].slice(0, 20)}
+                        <div style={{ fontSize: 24, color: '#94a3b8', display: 'flex', alignItems: 'center', flexWrap: 'wrap', marginBottom: 28 }}>
+                            Charted by {renderTextWithEmojis((levelData.author_full || levelData.author || 'Unknown').split('#')[0].slice(0, 20), 24)}
                         </div>
 
                         {/* Description */}
@@ -368,9 +428,11 @@ export default async function Image({ params }) {
                                 borderRadius: 16, // Reduced curve
                                 border: '1px solid rgba(255, 255, 255, 0.4)',
                                 display: 'flex',
+                                flexWrap: 'wrap',
+                                alignItems: 'center',
                                 maxWidth: 660,
                             }}>
-                                {levelData.description.slice(0, 130)}{levelData.description.length > 130 ? '...' : ''}
+                                {renderTextWithEmojis(levelData.description.slice(0, 130), 18)}{levelData.description.length > 130 ? '...' : ''}
                             </div>
                         )}
                     </div>

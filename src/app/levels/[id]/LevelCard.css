@@ -3,9 +3,6 @@
     padding-top: 120px;
     position: relative;
     box-sizing: border-box;
-    overflow-x: hidden !important;
-    /* Prevent horizontal scroll */
-    height: auto !important;
     width: 100%;
 }
 
@@ -434,8 +431,9 @@
     border: 1px solid var(--glass-border);
     border-radius: 20px;
     padding: 30px;
-    width: 350px;
-    flex-shrink: 0;
+    width: 100%;
+    max-width: 350px;
+    flex: 1 1 300px;
 }
 
 .comments-card {
@@ -443,8 +441,8 @@
     border: 1px solid var(--glass-border);
     border-radius: 20px;
     padding: 30px;
-    flex: 1;
-    min-width: 350px;
+    flex: 2 1 400px;
+    min-width: 0;
 }
 
 .stats-title {
@@ -487,6 +485,70 @@
     color: white;
 }
 
+/* StatWithGraph Component Styles */
+.stat-with-graph-container {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.stat-with-graph-container:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.stat-with-graph-container .stat-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.stat-with-graph-container .stat-label {
+    flex: 1;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.stat-with-graph-container .stat-value {
+    font-size: 18px;
+    font-weight: 700;
+    color: white;
+}
+
+.stat-graph-drawer {
+    max-height: 0;
+    overflow: hidden;
+    padding: 0 16px;
+    transition: max-height 0.3s ease, padding 0.3s ease;
+}
+
+.stat-with-graph-container.open .stat-graph-drawer {
+    max-height: 120px;
+    padding: 0 16px 16px 16px;
+}
+
+.graph-svg {
+    width: 100%;
+    height: 76px;
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.graph-path {
+    fill: none;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.graph-area {
+    opacity: 0.6;
+}
+
 .comments-card {
     background: rgba(0, 0, 0, 0.3);
     border: 1px solid var(--glass-border);
@@ -498,7 +560,6 @@
     justify-content: flex-start;
     flex: 999 1 500px;
     min-width: 300px;
-    height: 100%;
 }
 
 .comments-placeholder {
@@ -643,7 +704,15 @@
 
 @media (max-width: 1024px) {
     .level-bottom-section {
-        grid-template-columns: 1fr 1fr;
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .stats-card,
+    .comments-card {
+        max-width: 100%;
+        width: 100%;
+        flex: none;
     }
 
     .stats-card {
@@ -802,6 +871,228 @@ body.light-mode .level-description {
     color: #334155;
 }
 
+/* Countdown Overlay Styles - Respects header/footer */
+.countdown-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 40px;
+    backdrop-filter: blur(20px);
+    background-size: cover;
+    background-position: center;
+    border-radius: 20px;
+    overflow: hidden;
+}
+
+.countdown-overlay::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: -1;
+}
+
+.countdown-jacket-container {
+    width: 250px;
+    height: 250px;
+    border-radius: 24px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+    position: relative;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    animation: float 6s ease-in-out infinite;
+}
+
+.countdown-jacket {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.countdown-timer-container {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+}
+
+.countdown-unit {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 24px 20px;
+    min-width: 100px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    transition: all 0.3s ease;
+}
+
+.countdown-value {
+    font-size: 3.5rem;
+    font-weight: 800;
+    line-height: 1;
+    color: white;
+    font-variant-numeric: tabular-nums;
+    text-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+.countdown-label {
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: rgba(255, 255, 255, 0.6);
+    margin-top: 8px;
+    font-weight: 600;
+}
+
+.countdown-unit.active {
+    border-color: rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.12);
+    transform: translateY(-5px);
+}
+
+.countdown-message {
+    font-size: 1.5rem;
+    color: white;
+    font-weight: 600;
+    opacity: 0.8;
+    margin-top: 20px;
+    letter-spacing: 1px;
+}
+
+/* Animations */
+@keyframes float {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-20px);
+    }
+}
+
+@keyframes pulse-large {
+
+    0%,
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    50% {
+        transform: scale(1.1);
+        opacity: 0.8;
+    }
+}
+
+@keyframes pulse-critical {
+    0% {
+        transform: scale(1);
+        text-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
+    }
+
+    50% {
+        transform: scale(1.2);
+        text-shadow: 0 0 40px rgba(239, 68, 68, 0.8);
+    }
+
+    100% {
+        transform: scale(1);
+        text-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
+    }
+}
+
+/* Final Countdown Styles */
+.final-countdown-container {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.final-seconds {
+    font-size: 8rem;
+    font-weight: 900;
+    color: white;
+    text-shadow: 0 0 50px rgba(56, 189, 248, 0.6);
+    animation: pulse-large 1s infinite;
+}
+
+.final-seconds.critical {
+    font-size: 12rem;
+    color: #ef4444;
+    text-shadow: 0 0 80px rgba(239, 68, 68, 0.8);
+    animation: pulse-critical 0.5s infinite;
+}
+
+/* Confetti */
+.confetti-piece {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background: #ffd700;
+    top: -10px;
+    opacity: 0;
+    animation: confetti-fall 4s ease-out forwards;
+}
+
+@keyframes confetti-fall {
+    0% {
+        transform: translateY(0) rotate(0deg);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translateY(100vh) rotate(720deg);
+        opacity: 0;
+    }
+}
+
+@media (max-width: 768px) {
+    .countdown-timer-container {
+        gap: 10px;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .countdown-unit {
+        min-width: 70px;
+        padding: 16px 12px;
+    }
+
+    .countdown-value {
+        font-size: 2rem;
+    }
+
+    .countdown-jacket-container {
+        width: 180px;
+        height: 180px;
+    }
+
+    .final-seconds {
+        font-size: 5rem;
+    }
+
+    .final-seconds.critical {
+        font-size: 8rem;
+    }
+}
+
 body.light-mode .comments-card {
     background: rgba(255, 255, 255, 0.45);
     border-color: rgba(15, 23, 42, 0.1);
@@ -905,80 +1196,4 @@ body.light-mode .player-text span {
     color: #0f172a !important;
 }
 
-.stat-with-graph-container {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    cursor: pointer;
-    transition: background 0.3s ease;
-    border-radius: 12px;
-}
-
-.stat-header {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    color: rgba(255, 255, 255, 0.7);
-    padding: 8px 12px;
-    border-radius: 12px;
-    transition: all 0.2s ease;
-}
-
-.stat-header:hover {
-    background: rgba(255, 255, 255, 0.05);
-    color: white;
-}
-
-body.light-mode .stat-header {
-    color: #475569;
-}
-
-body.light-mode .stat-header:hover {
-    background: rgba(15, 23, 42, 0.05);
-    color: #0f172a;
-}
-
-.stat-graph-drawer {
-    max-height: 0;
-    opacity: 0;
-    overflow: hidden;
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    background: rgba(0, 0, 0, 0.2);
-    border-radius: 12px;
-    margin: 0 12px;
-    border: 1px solid transparent;
-}
-
-.stat-with-graph-container.open .stat-graph-drawer {
-    max-height: 120px;
-    opacity: 1;
-    margin-bottom: 12px;
-    padding: 12px;
-    border-color: rgba(255, 255, 255, 0.1);
-}
-
-body.light-mode .stat-graph-drawer {
-    background: rgba(255, 255, 255, 0.5);
-}
-
-body.light-mode .stat-with-graph-container:hover .stat-graph-drawer {
-    border-color: rgba(15, 23, 42, 0.1);
-}
-
-.graph-svg {
-    width: 100%;
-    height: 60px;
-    overflow: visible;
-}
-
-.graph-path {
-    fill: none;
-    stroke-width: 2;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-}
-
-.graph-area {
-    fill-opacity: 0.2;
-    stroke: none;
-}
+/* End of file */

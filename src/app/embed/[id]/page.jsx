@@ -1,8 +1,12 @@
 import { notFound } from 'next/navigation';
 import "./page.css";
 import { Heart, MessageSquare } from 'lucide-react';
+import FormattedText from '@/components/formatted-text/FormattedText';
 
 const APILink = process.env.NEXT_PUBLIC_API_URL;
+// ... (keep existing lines)
+
+// Inside component:
 const SONOLUS_SERVER_URL = process.env.NEXT_PUBLIC_SONOLUS_SERVER_URL;
 
 async function fetchLevel(rawId) {
@@ -46,6 +50,9 @@ export default async function EmbedPage({ params }) {
         notFound();
     }
 
+    // Explicit check to satisfy static analysis/runtime safety if notFound() behavior varies
+    if (!level) return null;
+
     const authorName = level.author ? level.author.split('#')[0] : 'Unknown';
     const authorDisplay = authorName;
     const baseUrl = SONOLUS_SERVER_URL || '';
@@ -58,8 +65,8 @@ export default async function EmbedPage({ params }) {
                         <img src={level.coverUrl} alt={level.title} className="embed-thumbnail" />
                     )}
                     <div className="embed-info">
-                        <h1 className="embed-title">{level.title}</h1>
-                        <p className="embed-description">{level.description}</p>
+                        <h1 className="embed-title"><FormattedText text={level.title} /></h1>
+                        <p className="embed-description"><FormattedText text={level.description} /></p>
                     </div>
                 </div>
 

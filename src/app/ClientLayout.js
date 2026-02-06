@@ -155,58 +155,64 @@ function HeaderContent() {
 
             {(mobileMenuOpen || isClosing) && (
                 <div className={`mobile-menu ${isClosing ? 'animate-slide-up-out' : 'animate-slide-down'}`}>
-                    <div className="mobile-menu-header">
+                    {/* Enhanced Expandable Header */}
+                    <div className="mobile-menu-expanded-header">
                         <Link href="/" onClick={handleMobileMenuClose} className="mobile-logo">
                             <img src="/636a8f1e76b38cb1b9eb0a3d88d7df6f.png" alt="UntitledCharts" />
+                            <span className="mobile-logo-text">UntitledCharts</span>
                         </Link>
                         <button
                             onClick={handleMobileMenuClose}
-                            className="mobile-close-btn"
+                            className="mobile-close-btn-enhanced"
                             aria-label="Close Menu"
                         >
-                            <X size={28} />
+                            <X size={24} />
                         </button>
                     </div>
 
-                    <Suspense fallback={null}>
-                        <NavLinks user={sonolusUser} t={t} onNavClick={handleMobileMenuClose} />
-                    </Suspense>
-                    <div className="mobile-menu-divider"></div>
+                    {/* Body Content with staggered animations */}
+                    <div className="mobile-menu-body">
+                        <Suspense fallback={null}>
+                            <NavLinks user={sonolusUser} t={t} onNavClick={handleMobileMenuClose} />
+                        </Suspense>
 
-                    <div className="mobile-menu-controls">
-                        <div className="mobile-control-row">
-                            <span>{t('header.language', 'Language')}</span>
-                            <LangPicker />
-                        </div>
-                        <div className="mobile-control-row">
-                            <span>{t('header.theme', 'Theme')}</span>
-                            <ThemeToggler />
-                        </div>
-                    </div>
+                        <div className="mobile-menu-divider"></div>
 
-                    <div className="mobile-menu-auth">
-                        {isLoggedIn && sonolusUser ? (
-                            <div className="mobile-user-profile">
-                                <div className="user-info">
-                                    <div className="user-avatar small">
-                                        {sonolusUser.sonolus_username.charAt(0).toUpperCase()}
-                                    </div>
-                                    <span>{sonolusUser.sonolus_username}</span>
-                                </div>
-                                <button onClick={handleLogout} className="mobile-logout-btn">
-                                    {t('nav.logout')}
-                                </button>
+                        <div className="mobile-menu-controls">
+                            <div className="mobile-control-row">
+                                <span>{t('header.language', 'Language')}</span>
+                                <LangPicker />
                             </div>
-                        ) : (
-                            <Link href="/login" className="mobile-login-btn" onClick={() => setMobileMenuOpen(false)}>
-                                <User size={20} />
-                                {t('nav.login')}
-                            </Link>
-                        )}
-                    </div>
+                            <div className="mobile-control-row">
+                                <span>{t('header.theme', 'Theme')}</span>
+                                <ThemeToggler />
+                            </div>
+                        </div>
 
-                    <div className="mobile-menu-footer">
-                        <p>Untitled Charts</p>
+                        <div className="mobile-menu-auth">
+                            {isLoggedIn && sonolusUser ? (
+                                <div className="mobile-user-profile">
+                                    <div className="user-info">
+                                        <div className="user-avatar small">
+                                            {sonolusUser.sonolus_username.charAt(0).toUpperCase()}
+                                        </div>
+                                        <span>{sonolusUser.sonolus_username}</span>
+                                    </div>
+                                    <button onClick={handleLogout} className="mobile-logout-btn">
+                                        {t('nav.logout')}
+                                    </button>
+                                </div>
+                            ) : (
+                                <Link href="/login" className="mobile-login-btn" onClick={() => setMobileMenuOpen(false)}>
+                                    <User size={20} />
+                                    {t('nav.login')}
+                                </Link>
+                            )}
+                        </div>
+
+                        <div className="mobile-menu-footer">
+                            <p>Untitled Charts</p>
+                        </div>
                     </div>
                 </div>
             )}

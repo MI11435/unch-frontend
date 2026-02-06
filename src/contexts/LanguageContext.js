@@ -1,7 +1,13 @@
 "use client";
 import { createContext, useContext, useState, useEffect } from "react";
 
-const LanguageContext = createContext();
+const LanguageContext = createContext({
+    t: (key) => key,
+    language: 'en',
+    changeLanguage: () => { },
+    supportedLangs: {},
+    loading: false
+});
 
 export function LanguageProvider({ children }) {
     const [language, setLanguage] = useState("en");

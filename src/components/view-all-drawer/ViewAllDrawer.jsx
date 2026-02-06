@@ -112,8 +112,8 @@ export default function ViewAllDrawer({
                     coverUrl: (base && item.jacket_file_hash && authorHash) ? `${base}/${authorHash}/${item.id}/${item.jacket_file_hash}` : (item.coverUrl || item.thumbnail?.url),
                     bgmUrl: (base && item.music_file_hash && authorHash) ? `${base}/${authorHash}/${item.id}/${item.music_file_hash}` : (item.bgmUrl || item.bgm?.url),
                     rating: item.rating ?? 0,
-                    likes: item.likes ?? 0,
-                    commentsCount: item.comments ?? 0
+                    likeCount: item.like_count ?? item.likes ?? 0,
+                    commentsCount: item.comment_count ?? item.comments_count ?? item.comments ?? 0
                 };
             });
 
