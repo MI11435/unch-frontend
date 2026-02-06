@@ -56,7 +56,7 @@ export default function EmojisPage() {
                     Click on any emoji to copy its command
                     <br />
                     <span style={{ fontSize: '0.8em', color: '#f87171', marginTop: '4px', display: 'block' }}>
-                        * These emojis only work on the website and will not appear in Sonolus
+                        * These emojis can be used anywhere (comments, descriptions) and will work on the website, but will not appear in Sonolus.
                     </span>
                 </p>
 

@@ -433,7 +433,7 @@ export default function LevelCard({ initialLevel, id, SONOLUS_SERVER_URL }) {
           </div>
 
           <div className="level-info">
-            <h1 className="level-title"><FormattedText text={level.title} /></h1>
+            <h1 className="level-title">{level.title}</h1>
 
             <div className="level-credits">
               <div className="level-credit-item">

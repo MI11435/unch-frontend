@@ -16,13 +16,16 @@ import {
     AlertCircle,
     MessageSquare,
     ArrowLeft,
-    Star
+    Star,
+    ChevronLeft,
+    ChevronRight
 } from "lucide-react";
 import "./page.css";
 
 const DEFAULT_PFP = "https://yt3.googleusercontent.com/kyRX8fESnlAo8xoThhWanH8geyT_U6JIOgTAOU8D1PfzMXl_BW95y06R_sGNKosi_E2arwN9=s160-c-k-c0x00ffffff-no-rj";
 
 import FormattedText from "../../../components/formatted-text/FormattedText";
+import { customProfiles } from "../../../data/customProfiles";
 
 export default function UserProfile({ params }) {
     const { id } = use(params);
@@ -30,6 +33,8 @@ export default function UserProfile({ params }) {
     const { t } = useLanguage();
     const [account, setAccount] = useState(null);
     const [charts, setCharts] = useState([]);
+    const [currentPage, setCurrentPage] = useState(1);
+    const ITEMS_PER_PAGE = 5;
     const [assetBaseUrl, setAssetBaseUrl] = useState("");
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -167,6 +172,24 @@ export default function UserProfile({ params }) {
     // Check if user has any special roles
     const hasCharts = charts.length > 0;
 
+    // Custom Profile Logic
+    const customProfile = account ? (customProfiles[account.id] || customProfiles[account.sonolus_id] || customProfiles[id]) : null;
+
+    // Pagination Logic
+    const totalPages = Math.ceil(charts.length / ITEMS_PER_PAGE);
+    const displayedCharts = charts.slice(
+        (currentPage - 1) * ITEMS_PER_PAGE,
+        currentPage * ITEMS_PER_PAGE
+    );
+
+    const handlePageChange = (newPage) => {
+        if (newPage >= 1 && newPage <= totalPages) {
+            setCurrentPage(newPage);
+            // Optional: Scroll to top of charts list
+            // document.querySelector('.section-header')?.scrollIntoView({ behavior: 'smooth' });
+        }
+    };
+
     if (loading) {
         return (
             <main className="profile-page">
@@ -197,7 +220,27 @@ export default function UserProfile({ params }) {
 
     return (
         <main className="profile-page">
-            <div className="profile-container">
+            {/* Custom Background Blur if Banner exists */}
+            {customProfile?.banner && (
+                <div
+                    className="profile-bg-blur"
+                    style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundImage: `url(${customProfile.banner})`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        filter: 'blur(40px) brightness(0.4)',
+                        opacity: 0.6,
+                        zIndex: 0,
+                        pointerEvents: 'none'
+                    }}
+                />
+            )}
+            <div className="profile-container" style={{ position: 'relative', zIndex: 1 }}>
                 {/* Back Button */}
                 <button className="back-btn" onClick={handleBack}>
                     <ArrowLeft size={18} />
@@ -211,7 +254,7 @@ export default function UserProfile({ params }) {
                         <div className="profile-card">
                             {/* Cover */}
                             <div className="profile-cover">
-                                <img src="/def.webp" alt="" className="cover-image" />
+                                <img src={customProfile?.banner || "/def.webp"} alt="" className="cover-image" />
                                 <div className="cover-overlay"></div>
                             </div>
 
@@ -219,7 +262,7 @@ export default function UserProfile({ params }) {
                             <div className="profile-header">
                                 <div className="avatar-wrapper">
                                     <img
-                                        src={DEFAULT_PFP}
+                                        src={customProfile?.pfp || DEFAULT_PFP}
                                         alt={account.sonolus_username}
                                         className="profile-avatar"
                                     />
@@ -242,6 +285,13 @@ export default function UserProfile({ params }) {
                                         {account.mod && <span className="role mod">{t('userProfile.mod', 'Mod')}</span>}
                                     </div>
                                     <p className="handle">#{account.sonolus_handle}</p>
+
+                                    {/* Custom Bio */}
+                                    {customProfile?.bio && (
+                                        <div className="profile-bio" style={{ marginTop: '12px', color: 'rgba(255,255,255,0.8)', fontSize: '0.95rem', lineHeight: '1.5' }}>
+                                            <FormattedText text={customProfile.bio} />
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
@@ -287,7 +337,7 @@ export default function UserProfile({ params }) {
                                 </div>
                             ) : (
                                 <div className="chart-list">
-                                    {charts.map((chart, index) => {
+                                    {displayedCharts.map((chart, index) => {
                                         const chartKey = chart.id || chart.name;
                                         const isPlaying = playingId === chartKey;
                                         const musicUrl = getChartMusicUrl(chart);
@@ -314,7 +364,7 @@ export default function UserProfile({ params }) {
 
                                                 {/* Chart Info */}
                                                 <div className="chart-info">
-                                                    <h3 className="chart-title"><FormattedText text={chart.title} /></h3>
+                                                    <h3 className="chart-title">{chart.title}</h3>
                                                     <p className="chart-artist"><FormattedText text={chart.artists} /></p>
 
                                                     <div className="chart-meta">
@@ -336,6 +386,63 @@ export default function UserProfile({ params }) {
                                             </Link>
                                         );
                                     })}
+                                </div>
+                            )}
+
+                            {/* Pagination Controls */}
+                            {totalPages > 1 && (
+                                <div className="pagination-controls" style={{
+                                    display: 'flex',
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    gap: '16px',
+                                    marginTop: '20px'
+                                }}>
+                                    <button
+                                        onClick={() => handlePageChange(currentPage - 1)}
+                                        disabled={currentPage === 1}
+                                        className="pagination-btn"
+                                        style={{
+                                            padding: '8px',
+                                            borderRadius: '8px',
+                                            background: 'rgba(255, 255, 255, 0.05)',
+                                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                                            color: currentPage === 1 ? 'rgba(255, 255, 255, 0.3)' : 'white',
+                                            cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center'
+                                        }}
+                                    >
+                                        <ChevronLeft size={20} />
+                                    </button>
+
+                                    <span style={{
+                                        color: 'rgba(255, 255, 255, 0.7)',
+                                        fontSize: '0.9rem',
+                                        fontWeight: 600
+                                    }}>
+                                        {currentPage} / {totalPages}
+                                    </span>
+
+                                    <button
+                                        onClick={() => handlePageChange(currentPage + 1)}
+                                        disabled={currentPage === totalPages}
+                                        className="pagination-btn"
+                                        style={{
+                                            padding: '8px',
+                                            borderRadius: '8px',
+                                            background: 'rgba(255, 255, 255, 0.05)',
+                                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                                            color: currentPage === totalPages ? 'rgba(255, 255, 255, 0.3)' : 'white',
+                                            cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center'
+                                        }}
+                                    >
+                                        <ChevronRight size={20} />
+                                    </button>
                                 </div>
                             )}
                         </div>
