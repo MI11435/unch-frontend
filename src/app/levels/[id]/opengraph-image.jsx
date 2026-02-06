@@ -22,7 +22,7 @@ export default async function Image({ params }) {
         // 1. Prepare Core Asset Promises
         // Use absolute URL for public assets in Edge runtime to avoid relative path issues
         // We can reuse the API_URL or APP_URL logic, but for public files, constructing a full URL is safest.
-        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001';
 
         const logoUrl = `${appUrl}/636a8f1e76b38cb1b9eb0a3d88d7df6f.png`;
         const mikuUrl = `${appUrl}/mikudayo.png`;

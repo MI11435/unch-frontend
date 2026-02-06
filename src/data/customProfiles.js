@@ -11,8 +11,8 @@ export const customProfiles = {
     */
 
     "937ff86062628ee938b4fdd8691397729802ca3b13adce1df4039112b34defbf": {
-        pfp: "/custom/chinori_pfp.webp",
-        banner: "/custom/chinori_banner.webp",
+        pfp: "/custom/chinori_pfp.png",
+        banner: "/custom/chinori_banner.png",
         bio: "Hi, Chinori here. I make charts of hidden gems."
     }
 };

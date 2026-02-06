@@ -1,0 +1,43 @@
+import { customProfiles } from "../../../data/customProfiles";
+
+export async function generateMetadata({ params }) {
+    const { id } = await params;
+
+    // Fetch account data
+    let account = null;
+    try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/accounts/${id}`);
+        if (res.ok) {
+            const data = await res.json();
+            account = data.account;
+        }
+    } catch (e) {
+        console.error("Failed to fetch account for metadata", e);
+    }
+
+    if (!account) {
+        return {
+            title: "User Not Found | UntitledCharts",
+            description: "This user profile could not be found."
+        };
+    }
+
+    const customProfile = customProfiles[account.id] || customProfiles[account.sonolus_id] || customProfiles[id];
+
+    // Default Title and Description
+    const title = `${account.sonolus_username || "User"} on UntitledCharts`;
+    const description = customProfile?.bio || `Check out ${account.sonolus_username || "User"}'s charts on UntitledCharts!`;
+
+    return {
+        title: title,
+        description: description,
+        openGraph: {
+            title: title,
+            description: description,
+        }
+    };
+}
+
+export default function UserLayout({ children }) {
+    return <>{children}</>;
+}
