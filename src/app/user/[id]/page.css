@@ -107,6 +107,8 @@
     position: relative;
     background: #1a1f2a;
     overflow: hidden;
+    border-top-left-radius: 16px;
+    border-top-right-radius: 16px;
 }
 
 .cover-image {

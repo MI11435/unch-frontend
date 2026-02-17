@@ -1,38 +1,14 @@
 "use client";
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { emojis as CUSTOM_EMOJIS } from '@/data/emojis';
 
-const EMOJI_MAP = {
-    "smile": "😊",
-    "heart": "❤️",
-    "thumbsup": "👍",
-    "thumbsdown": "👎",
-    "cry": "😢",
-    "laugh": "😂",
-    "wink": "😉",
-    "fire": "🔥",
-    "star": "⭐",
-    "check": "✅",
-    "x": "❌",
-    "warning": "⚠️",
-    "note": "🎵",
-    "sparkles": "✨",
-    "party": "🎉",
-    "rocket": "🚀",
-    "eyes": "👀",
-    "sweat_smile": "😅",
-    "sob": "😭",
-    "clown": "🤡",
-    "skull": "💀",
-    "poop": "💩",
-    "100": "💯",
-    "broken_heart": "💔",
-    "sunglasses": "😎",
-    "thinking": "🤔",
-    "shrug": "🤷"
-};
-
-const EMOJO_LIST = Object.entries(EMOJI_MAP).map(([code, char]) => ({ code, char }));
+const EMOJO_LIST = Object.entries(CUSTOM_EMOJIS).map(([code, config]) => ({
+    code,
+    char: `:${code}:`,
+    isCustom: true,
+    image: config.image
+}));
 
 export default function EmojiSuggestion({
     value,
@@ -192,7 +168,15 @@ export default function EmojiSuggestion({
                     }}
                     onMouseEnter={() => setSelectedIndex(index)}
                 >
-                    <span style={{ fontSize: '18px' }}>{emoji.char}</span>
+                    <span style={{ fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '24px', height: '24px' }}>
+                        {emoji.isCustom ? (
+                            <img
+                                src={emoji.image.startsWith('http') ? emoji.image : `/emojis/${emoji.image}`}
+                                alt={emoji.code}
+                                style={{ width: '20px', height: '20px', objectFit: 'contain' }}
+                            />
+                        ) : emoji.char}
+                    </span>
                     <span style={{ opacity: 0.8 }}>:{emoji.code}:</span>
                 </li>
             ))}

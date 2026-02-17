@@ -162,25 +162,22 @@ function HomeContent() {
 
       if (staffPick && actualType !== 'random') queryParams.append('staff_pick', '1');
 
+      if (sonolusHandleIs) queryParams.append('sonolus_handle_is', sonolusHandleIs);
+
       if (actualType === 'quick') {
         if (searchQuery) queryParams.append('meta_includes', searchQuery);
         queryParams.append('sort_by', searchType === 'newest' ? 'created_at' : sortBy);
         queryParams.append('sort_order', sortOrder);
       } else if (searchType === 'advanced') {
-        if (minRating) queryParams.append('min_rating', minRating);
-        if (maxRating) queryParams.append('max_rating', maxRating);
-        if (tags) queryParams.append('tags', tags);
-        if (minLikes) queryParams.append('min_likes', minLikes);
-        if (maxLikes) queryParams.append('max_likes', maxLikes);
-        if (likedBy) queryParams.append('liked_by', 'true');
         if (titleIncludes) queryParams.append('title_includes', titleIncludes);
         if (descriptionIncludes) queryParams.append('description_includes', descriptionIncludes);
         if (artistsIncludes) queryParams.append('artists_includes', artistsIncludes);
-        if (sonolusHandleIs) queryParams.append('sonolus_handle_is', sonolusHandleIs);
-        if (searchQuery) queryParams.append('meta_includes', searchQuery);
-
-        queryParams.append('sort_by', sortBy);
-        queryParams.append('sort_order', sortOrder);
+        if (minRating) queryParams.append('minR', minRating);
+        if (maxRating) queryParams.append('maxR', maxRating);
+        if (tags.length > 0) queryParams.append('tags', tags.join(','));
+        if (minLikes) queryParams.append('minL', minLikes);
+        if (maxLikes) queryParams.append('maxL', maxLikes);
+        if (likedBy) queryParams.append('liked_by', likedBy);
       }
 
       const res = await fetch(`${apiBase}/api/charts?${queryParams.toString()}`);
@@ -201,7 +198,11 @@ function HomeContent() {
       setError("Failed to load charts.");
       setLoading(false);
     }
-  }, [APILink, searchType, page, staffPick, searchQuery, sortBy, sortOrder, minRating, maxRating, tags, minLikes, maxLikes, likedBy, titleIncludes, descriptionIncludes, artistsIncludes, mapChartData, setPosts, setPageCount, setTotalResults, setLoading, setError]);
+  }, [APILink, searchType, page, staffPick, searchQuery, sortBy, sortOrder, minRating, maxRating, tags, minLikes, maxLikes, likedBy, titleIncludes, descriptionIncludes, artistsIncludes, mapChartData, setPosts, setPageCount, setTotalResults,
+    setLoading,
+    setError,
+    sonolusHandleIs
+  ]);
 
   const FullLoading = () => (
     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '300px' }}>

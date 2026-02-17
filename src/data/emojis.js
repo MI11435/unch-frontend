@@ -10,6 +10,15 @@ export const emojis = {
     },
     "os_uweh": {
         "image": "uweh.webp"
+    },
+    "headbang": {
+        "image": "headbang.gif"
+    },
+    "punish_natz": {
+        "image": "punish_natz.webp"
+    },
+    "silly_3d_printed_cat": {
+        "image": "silly_3d_printed_cat.webp"
     }
 };
 

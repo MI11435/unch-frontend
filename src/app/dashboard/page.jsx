@@ -338,6 +338,7 @@ function DashboardContent() {
     titleIncludes,
     descriptionIncludes,
     artistsIncludes,
+    sonolusHandleIs,
     clearExpiredSession,
   ]);
 
