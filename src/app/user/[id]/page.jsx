@@ -893,7 +893,9 @@ export default function UserProfile({ params }) {
                                         <BarChart2 size={18} />
                                     </div>
                                     <div className="stat-data">
-                                        <span className="stat-value">{stats.charts_published || 0} {t('userProfile.totalCharts', 'Charts')}</span>
+                                        <span className="stat-value">
+                                            {t(stats.charts_published === 1 ? 'userProfile.charts_singular' : 'userProfile.charts_plural', { 1: stats.charts_published || 0 })}
+                                        </span>
                                     </div>
                                 </div>
                                 <div className="stat-item">
@@ -901,7 +903,9 @@ export default function UserProfile({ params }) {
                                         <Heart size={18} />
                                     </div>
                                     <div className="stat-data">
-                                        <span className="stat-value">{stats.likes_received || 0} {t('userProfile.totalLikes', 'Likes')}</span>
+                                        <span className="stat-value">
+                                            {t(stats.likes_received === 1 ? 'userProfile.likes_singular' : 'userProfile.likes_plural', { 1: stats.likes_received || 0 })}
+                                        </span>
                                     </div>
                                 </div>
                                 <div className="stat-item">
@@ -909,7 +913,9 @@ export default function UserProfile({ params }) {
                                         <MessageSquare size={18} />
                                     </div>
                                     <div className="stat-data">
-                                        <span className="stat-value">{stats.comments_received || 0} {t('userProfile.totalComments', 'Comments')}</span>
+                                        <span className="stat-value">
+                                            {t(stats.comments_received === 1 ? 'userProfile.comments_singular' : 'userProfile.comments_plural', { 1: stats.comments_received || 0 })}
+                                        </span>
                                     </div>
                                 </div>
                             </div>

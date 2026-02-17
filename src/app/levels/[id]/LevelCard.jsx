@@ -816,15 +816,15 @@ export default function LevelCard({ initialLevel, id, SONOLUS_SERVER_URL }) {
           <div className="stats-list">
             <StatWithGraph
               icon={Heart}
-              label={t('levelDetail.likes')}
+              label={level.likes === 1 ? t('levelDetail.like') : t('levelDetail.likes')}
               value={level.likes || 0}
               color="#f87171"
               data={likesHistory}
             />
             <StatWithGraph
               icon={MessageSquare}
-              label={t('levelDetail.comments')}
-              value={commentsVal}
+              label={level.comments === 1 ? t('levelDetail.comment') : t('levelDetail.comments')}
+              value={level.comments || 0}
               color="#38bdf8"
               data={commentsHistory}
             />

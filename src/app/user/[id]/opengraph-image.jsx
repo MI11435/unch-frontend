@@ -224,11 +224,11 @@ export default async function Image({ params }) {
                             <div style={{ display: 'flex', gap: 40, marginTop: 20 }}>
                                 <div style={{ display: 'flex', flexDirection: 'column' }}>
                                     <span style={{ fontSize: 36, fontWeight: 700, color: 'white' }}>{totalCharts}</span>
-                                    <span style={{ fontSize: 16, color: 'rgba(255,255,255,0.5)' }}>Charts</span>
+                                    <span style={{ fontSize: 16, color: 'rgba(255,255,255,0.5)' }}>{totalCharts === 1 ? 'Chart' : 'Charts'}</span>
                                 </div>
                                 <div style={{ display: 'flex', flexDirection: 'column' }}>
                                     <span style={{ fontSize: 36, fontWeight: 700, color: 'white' }}>{formatNumber(totalLikes)}</span>
-                                    <span style={{ fontSize: 16, color: 'rgba(255,255,255,0.5)' }}>Total Likes</span>
+                                    <span style={{ fontSize: 16, color: 'rgba(255,255,255,0.5)' }}>{totalLikes === 1 ? 'Total Like' : 'Total Likes'}</span>
                                 </div>
                             </div>
                         </div>
