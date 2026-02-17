@@ -20,7 +20,7 @@ import {
 import PaginationControls from "../../components/pagination-controls/PaginationControls";
 import FormattedText from "../../components/formatted-text/FormattedText";
 import { useUser } from "../../contexts/UserContext";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useLanguage } from "../../contexts/LanguageContext";
 import LiquidSelect from "../../components/liquid-select/LiquidSelect";
 import DashboardSkeleton from "../../components/dashboard-skeleton/DashboardSkeleton";
@@ -89,6 +89,7 @@ StatWithGraph.displayName = "StatWithGraph";
 
 export default function Dashboard() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { t } = useLanguage();
   const { sonolusUser, session, isSessionValid, clearExpiredSession, isClient, sessionReady } = useUser();
 
@@ -117,13 +118,14 @@ export default function Dashboard() {
   const [staffPick, setStaffPick] = useState(false);
   const [sortBy, setSortBy] = useState("created_at");
   const [sortOrder, setSortOrder] = useState("desc");
-  const [minRating, setMinRating] = useState(1);
+  const [minRating, setMinRating] = useState("");
   const [maxRating, setMaxRating] = useState(99);
   const [descriptionIncludes, setDescriptionIncludes] = useState("");
   const [titleIncludes, setTitleIncludes] = useState("");
   const [artistsIncludes, setArtistsIncludes] = useState("");
   const [tags, setTags] = useState("");
-  const [filtersExpanded, setFiltersExpanded] = useState(true);
+
+  const sonolusHandleIs = searchParams.get('sonolus_handle_is');
 
   const [isOpen, setIsOpen] = useState(false);
   const [mode, setMode] = useState(null);
@@ -133,16 +135,15 @@ export default function Dashboard() {
   const [activeMenu, setActiveMenu] = useState(null);
   const [mounted, setMounted] = useState(false);
 
-  // --- NEW: schedule popover state
   const [scheduleMenuPostId, setScheduleMenuPostId] = useState(null);
-  const [scheduleDtLocal, setScheduleDtLocal] = useState(""); // "YYYY-MM-DDTHH:mm"
+  const [scheduleDtLocal, setScheduleDtLocal] = useState("");
   const scheduleAnchorRef = useRef(null);
 
   useEffect(() => setMounted(true), []);
 
-  // ---- helpers for schedule
+
   const dtLocalToEpochSeconds = (value) => {
-    const d = new Date(value); // local time
+    const d = new Date(value);
     const ms = d.getTime();
     if (Number.isNaN(ms)) return null;
     return Math.floor(ms / 1000);
@@ -156,7 +157,6 @@ export default function Dashboard() {
     )}`;
   };
 
-  // scheduled_publish is an ISO string (from pydantic model_dump) or null
   const getScheduledEpochSeconds = (post) => {
     const v = post.scheduled_publish ?? null;
     if (!v) return null;
@@ -176,7 +176,7 @@ export default function Dashboard() {
     setScheduleDtLocal("");
   };
 
-  // close schedule popover on outside click
+
   useEffect(() => {
     if (!scheduleMenuPostId) return;
 
@@ -226,6 +226,9 @@ export default function Dashboard() {
       queryParams.append("limit", "10");
       queryParams.append("status", "ALL");
 
+      queryParams.append("status", "ALL");
+
+      if (sonolusHandleIs) queryParams.append("sonolus_handle_is", sonolusHandleIs);
       if (staffPick) queryParams.append("staff_pick", "1");
       if (minRating) queryParams.append("min_rating", minRating);
       if (maxRating) queryParams.append("max_rating", maxRating);
@@ -301,8 +304,10 @@ export default function Dashboard() {
             0,
           createdAt: item.created_at,
           publishedAt: item.published_at,
+          createdAt: item.created_at,
+          publishedAt: item.published_at,
           status: item.status,
-          scheduled_publish: item.scheduled_publish ?? null, // <-- ISO string from pydantic model_dump
+          scheduled_publish: item.scheduled_publish ?? null,
           hasJacket: !!jacketHash,
           hasAudio: !!bgmHash,
           hasChart: !!chartHash,
@@ -312,8 +317,8 @@ export default function Dashboard() {
       });
 
       setPosts(normalized);
-      setPageCount(data.pageCount || 0);
-      setTotalCount(data.data?.[0]?.total_count || 0);
+      setPageCount(data.pageCount || data.page_count || 0);
+      setTotalCount(data.total_count || data.data?.[0]?.total_count || 0);
     } catch (err) {
       console.error(err);
       setError(err.message || "Failed to load charts");
@@ -655,18 +660,13 @@ export default function Dashboard() {
     }
   };
 
-  const shouldShowPagination = () => {
-    const total = totalCount || posts.length;
-    return total > 10;
-  };
 
-  // ---- UPDATED: supports schedule-public when third arg is provided
+
   const updateVisibility = useCallback(
     async (post, newStatus, schedulePayload) => {
       const oldStatus = post.status;
       const oldScheduled = post.scheduled_publish ?? null;
 
-      // optimistic only for normal visibility changes
       if (schedulePayload === undefined) {
         setPosts((currentPosts) =>
           currentPosts.map((p) => (p.id === post.id ? { ...p, status: newStatus.toUpperCase() } : p))
@@ -691,7 +691,8 @@ export default function Dashboard() {
 
         if (!res.ok) throw new Error(await res.text());
 
-        // optimistic scheduled_publish update as ISO string (since backend uses pydantic model_dump)
+        if (!res.ok) throw new Error(await res.text());
+
         if (schedulePayload !== undefined) {
           const next =
             schedulePayload.publish_time === null
@@ -705,7 +706,6 @@ export default function Dashboard() {
       } catch (e) {
         console.error(e);
 
-        // rollback
         setPosts((currentPosts) =>
           currentPosts.map((p) => {
             if (p.id !== post.id) return p;
@@ -838,14 +838,15 @@ export default function Dashboard() {
                       <label>{t("search.minRating")}</label>
                       <input
                         type="number"
-                        placeholder={t("search.minRatingPlaceholder")}
+                        min="-999"
+                        max="20"
+                        placeholder="-999"
                         value={minRating}
                         onChange={(e) => setMinRating(e.target.value)}
                         onWheel={(e) => e.target.blur()}
                         className="liquid-input"
                       />
                     </div>
-
                     <div className="search-control-group">
                       <label>{t("search.maxRating")}</label>
                       <input
@@ -1181,6 +1182,6 @@ export default function Dashboard() {
           isDark={true}
         />
       </div>
-    </div>
+    </div >
   );
 }

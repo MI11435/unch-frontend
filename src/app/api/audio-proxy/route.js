@@ -26,8 +26,7 @@ export async function GET(request) {
             status: 200,
             headers: headers,
         });
-    } catch (error) {
-        console.error('Proxy error:', error);
+    } catch {
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }

@@ -155,6 +155,7 @@ export default function HomepageChartCard({
                             else if (onPlay) onPlay(id, bgmUrl);
                         }}
                         style={{ position: 'relative', zIndex: 50 }}
+                        aria-label={isPlaying ? "Pause audio" : "Play audio"}
                     >
                         {isPlaying ? <Pause size={24} className="text-blue-500" /> : <Play size={24} className="text-blue-500" />}
                     </button>

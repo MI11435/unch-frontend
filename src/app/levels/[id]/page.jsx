@@ -8,9 +8,11 @@ const SONOLUS_SERVER_URL = process.env.NEXT_PUBLIC_SONOLUS_SERVER_URL;
 async function fetchLevel(rawId) {
   const cleanId = rawId.replace(/^UnCh-/, '');
   const res = await fetch(`${APILink}/api/charts/${cleanId}/`);
+  if (res.status === 404 || res.status === 403) return null;
   if (!res.ok) throw new Error(`API returned ${res.status}`);
   const json = await res.json();
   const data = json.data;
+  if (data.status === 'PRIVATE') return null;
   const base = json.asset_base_url;
 
   const buildAssetUrl = (hash) =>
@@ -23,6 +25,7 @@ async function fetchLevel(rawId) {
     description: data.description || 'No description provided.',
     thumbnail: buildAssetUrl(data.jacket_file_hash),
     authorId: data.author,
+    authorHandle: data.author_handle || data.author,
     author: data.author_full || data.author || 'Unknown',
     artists: data.artists || 'Unknown Artist',
     rating: data.rating || 0,
@@ -72,17 +75,9 @@ export async function generateMetadata({ params }) {
   };
   const publishedDate = formatDate(level.createdAt);
 
-  // Build structured description exactly as user requested
-  // Only Description
-  // Footer: UntitledCharts • Date (This is handled by Discord automatically if we provide site_name and published_time properly, or we format it into the description if we have to, but user requested footer)
+  // Build structured description
+  // Footer: UntitledCharts • Date
 
-  // NOTE: Discord uses 'og:site_name' for the top text usually. User wants "UntitledCharts • Date" as FOOTER. 
-  // Discord footer text is hard to control via standard OG. However, 'theme-color' handles the color.
-  // We will set siteName to 'Untitled Charts' and let Discord handle the rest, or appended to description if needed?
-  // User said: "UntitledCharts • 2/5/26, 4:50 PM should've been the footer... rather than making it the header"
-  // If we remove it from siteName, it won't be in header.
-
-  // Strip emojis from description for metadata (remove :emoji:)
   const rawDescription = level.description || '';
   const cleanDescription = rawDescription.replace(/:[a-zA-Z0-9_]+:/g, '').trim();
   const descriptionText = cleanDescription.slice(0, 300) || 'No description provided.';
@@ -93,8 +88,8 @@ export async function generateMetadata({ params }) {
     openGraph: {
       title: `${level.title}`,
       description: descriptionText,
-      siteName: `Untitled Charts`,
-      type: 'article', // 'article' allows publishedTime
+      siteName: `UntitledCharts${publishedDate ? ` - ${publishedDate}` : ''}`,
+      type: 'article',
       publishedTime: level.createdAt,
       authors: [authorName],
     },
@@ -102,7 +97,7 @@ export async function generateMetadata({ params }) {
       card: 'summary_large_image',
       title: `[Lv. ${level.rating}] ${level.title}`,
       description: descriptionText,
-      creator: `@${authorName}`, // Note: this might need valid twitter handle, but usually just displays text
+      creator: `@${authorName}`,
     },
     other: {
       'theme-color': '#38bdf8',
@@ -117,8 +112,12 @@ export default async function LevelPage({ params }) {
   let level = null;
   try {
     level = await fetchLevel(id);
-  } catch (e) {
-    // Consolas.log("Server fetch failed, defaulting to client-side fetch");
+  } catch {
+    // Server fetch failed, client-side will retry
+  }
+
+  if (level === null) {
+    notFound();
   }
 
   return <LevelCard initialLevel={level} id={id} SONOLUS_SERVER_URL={SONOLUS_SERVER_URL} />;

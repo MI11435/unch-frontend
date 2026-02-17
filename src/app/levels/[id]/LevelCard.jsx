@@ -2,23 +2,23 @@
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useState, useRef, useEffect } from 'react';
-import { Heart, MessageSquare, Share2, Copy, ExternalLink, ArrowLeft, User, Music, Play, Pause, Volume2, Star, Download, Eye, ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
+import { Heart, MessageSquare, Share2, Copy, ExternalLink, ArrowLeft, User, Music, Play, Pause, Volume2, Star, Download, Eye, EyeOff, ChevronLeft, ChevronRight, Calendar, MoreVertical, Lock, Trash2, Ban, ShieldCheck, UserX } from 'lucide-react';
 import WaveformPlayer from '../../../components/waveform-player/WaveformPlayer';
 import FormattedText from '../../../components/formatted-text/FormattedText';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { useUser } from '../../../contexts/UserContext';
 import "./LevelCard.css";
 
+const DEFAULT_PFP = "/defpfp.webp";
+
 
 const StatWithGraph = ({ icon: Icon, label, value, color, data }) => {
   const { t } = useLanguage();
 
-  // Validate and sanitize data
   const safeData = Array.isArray(data) && data.length > 0
     ? data.map(d => (typeof d === 'number' && !isNaN(d) ? d : 0))
     : [0, 0];
 
-  // Need at least 2 points for a line graph
   const chartData = safeData.length < 2 ? [safeData[0] || 0, safeData[0] || 0] : safeData;
 
   const width = 156;
@@ -84,7 +84,67 @@ export default function LevelCard({ initialLevel, id, SONOLUS_SERVER_URL }) {
   const [duration, setDuration] = useState(0);
   const [waveformBars, setWaveformBars] = useState([]);
   const audioRef = useRef(null);
+  const [showMenu, setShowMenu] = useState(false);
 
+  const updateVisibility = async (newStatus) => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/charts/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': session,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status: newStatus })
+      });
+      if (res.ok) {
+        setLevel({ ...level, status: newStatus });
+        setShowMenu(false);
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Failed to update visibility');
+    }
+  };
+
+  const toggleStaffPick = async () => {
+    try {
+      const newVal = !level.staffPick;
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/charts/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': session,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ staffPick: newVal })
+      });
+      if (res.ok) {
+        setLevel({ ...level, staffPick: newVal });
+        setShowMenu(false);
+      } else {
+        alert('Failed to toggle staff pick');
+      }
+    } catch {
+      alert('Error toggling staff pick');
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!confirm(t('levelDetail.confirmDelete', 'Are you sure you want to delete this chart?'))) return;
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/charts/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': session }
+      });
+      if (res.ok) {
+        router.push('/');
+      } else {
+        alert('Failed to delete');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Error deleting chart');
+    }
+  };
 
 
   useEffect(() => {
@@ -96,13 +156,11 @@ export default function LevelCard({ initialLevel, id, SONOLUS_SERVER_URL }) {
             headers['Authorization'] = session;
           }
 
-          // Try fetching from internal API (which might proxy or handle auth better)
           const cleanId = id.replace(/^UnCh-/, '');
           const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/charts/${cleanId}/`, { headers });
 
           if (response.ok) {
             const json = await response.json();
-            // Shim the data structure to match server-side fetchLevel
             const data = json.data;
             const base = json.asset_base_url;
             const buildAssetUrl = (hash) => hash && base && data.author ? `${base}/${data.author}/${data.id}/${hash}` : null;
@@ -114,6 +172,7 @@ export default function LevelCard({ initialLevel, id, SONOLUS_SERVER_URL }) {
               description: data.description || 'No description provided.',
               thumbnail: buildAssetUrl(data.jacket_file_hash),
               authorId: data.author,
+              authorHandle: data.author_handle || data.author,
               author: data.author_full || data.author || 'Unknown',
               artists: data.artists || 'Unknown Artist',
               rating: data.rating || 0,
@@ -125,10 +184,12 @@ export default function LevelCard({ initialLevel, id, SONOLUS_SERVER_URL }) {
               backgroundV3Url: buildAssetUrl(data.background_v3_file_hash || (data.backgroundV3 && data.backgroundV3.hash)),
               scheduled_publish: data.scheduled_publish || null,
               status: data.status || 'PUBLIC',
+              asset_base_url: base,
+              downloads: data.downloads || data.download_count || 0,
+              plays: data.plays || data.play_count || data.views || 0,
+              staffPick: data.staffPick || data.staff_pick || false,
             });
           } else {
-            // Fallback to /api/levels/ endpoint if charts fails?
-            // But existing countdown page used /api/levels/
             setError('not_found');
           }
         } catch (err) {
@@ -141,9 +202,67 @@ export default function LevelCard({ initialLevel, id, SONOLUS_SERVER_URL }) {
 
       fetchLevelClient();
     }
-  }, [id, level, session]); // Retry if session becomes available
+  }, [id, level, session]);
 
-  if (loading) return <div className="level-loading"><div className="loading-spinner"></div></div>;
+  const handleDeleteComment = async (commentId) => {
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL;
+      const res = await fetch(`${apiBase}/api/charts/${id.replace('UnCh-', '')}/comment/${commentId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': session }
+      });
+      if (res.ok) {
+        setComments(prevComments => prevComments.filter(comment => comment.id !== commentId));
+        setCommentCount(prevCount => Math.max(0, prevCount - 1));
+      } else {
+        alert("Failed to delete comment");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Error deleting comment");
+    }
+  };
+
+  const handleBanUser = async () => {
+    if (!level?.authorId) return;
+    if (!confirm(`Are you sure you want to BAN the author of this chart? This cannot be easily undone.`)) return;
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/accounts/${level.authorId}/ban`, {
+        method: 'POST',
+        headers: { 'Authorization': session }
+      });
+      if (res.ok) {
+        alert('User banned successfully');
+      } else {
+        alert('Failed to ban user');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Error banning user');
+    }
+  };
+
+  const handleDeleteAccountData = async () => {
+    if (!level?.authorId) return;
+    if (!confirm(`Are you sure you want to DELETE this user's account? ALL DATA WILL BE LOST.`)) return;
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/accounts/${level.authorId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': session }
+      });
+      if (res.ok) {
+        alert('User deleted successfully');
+        router.push('/');
+      } else {
+        alert('Failed to delete user');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Error deleting user');
+    }
+  };
+
+  if (loading) return (<div className="level-loading"><div className="loading-spinner"></div></div>);
   if (error || !level) return (
     <div className="level-error-container" style={{ padding: '40px', textAlign: 'center', color: 'white' }}>
       <h1>{t('common.error', 'Error')}</h1>
@@ -418,7 +537,7 @@ export default function LevelCard({ initialLevel, id, SONOLUS_SERVER_URL }) {
 
       <div className="level-detail-container">
         <div className="level-top-section">
-          <div className="level-image-container">
+          <div className="level-image-container" style={{ position: 'relative' }}>
             {level.thumbnail ? (
               <img
                 src={level.thumbnail}
@@ -428,6 +547,25 @@ export default function LevelCard({ initialLevel, id, SONOLUS_SERVER_URL }) {
             ) : (
               <div className="level-cover placeholder">
                 <span>{t('common.noImage')}</span>
+              </div>
+            )}
+            {(level.rating !== undefined && level.rating !== null) && (
+              <div className="lv-badge" style={{
+                position: 'absolute',
+                top: '10px',
+                right: '10px',
+                background: 'rgba(0,0,0,0.7)',
+                backdropFilter: 'blur(8px)',
+                border: '1px solid rgba(255,255,255,0.2)',
+                borderRadius: '8px',
+                padding: '4px 10px',
+                fontSize: '0.85rem',
+                fontWeight: '700',
+                color: '#38bdf8',
+                zIndex: 2,
+                letterSpacing: '0.5px'
+              }}>
+                Lv. {level.rating}
               </div>
             )}
           </div>
@@ -454,7 +592,7 @@ export default function LevelCard({ initialLevel, id, SONOLUS_SERVER_URL }) {
               </div>
               <div className="level-credit-item">
                 <span className="credit-label">{t('levelDetail.chartedBy')}</span>
-                <Link href={`/user/${level.authorId || level.author}`} className="charter-link"><FormattedText text={level.author} /></Link>
+                <Link href={`/user/${level.authorHandle || level.authorId}`} className="charter-link"><FormattedText text={level.author} /></Link>
               </div>
               <div className="level-credit-item">
                 <span className="credit-label"><Calendar size={14} style={{ marginRight: '4px', verticalAlign: 'text-bottom' }} /></span>
@@ -565,6 +703,102 @@ export default function LevelCard({ initialLevel, id, SONOLUS_SERVER_URL }) {
                 <Share2 size={18} />
                 {t('levelDetail.share')}
               </button>
+
+              {(sonolusUser && (sonolusUser.isAdmin || sonolusUser.isMod || sonolusUser.sonolus_id === level.authorId)) && (
+                <div className="menu-container" style={{ position: 'relative' }}>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowMenu(!showMenu);
+                    }}
+                    className="action-btn icon-only"
+                    style={{ padding: '10px' }}
+                  >
+                    <MoreVertical size={18} />
+                  </button>
+                  {showMenu && (
+                    <div className="dropdown-menu" style={{
+                      position: 'absolute',
+                      top: '100%',
+                      right: 0,
+                      marginTop: '8px',
+                      background: '#1e293b',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      borderRadius: '12px',
+                      padding: '8px',
+                      zIndex: 100,
+                      minWidth: '200px',
+                      boxShadow: '0 10px 40px rgba(0,0,0,0.5)'
+                    }}>
+                      {(sonolusUser.isMod || sonolusUser.isAdmin || sonolusUser.sonolus_id === level.authorId) && (
+                        <>
+                          <div className="menu-label" style={{ padding: '8px 12px', fontSize: '0.75rem', color: '#64748b', fontWeight: 'bold' }}>
+                            {t('levelCard.visibility', 'VISIBILITY')}
+                          </div>
+                          <div className="visibility-grid">
+                            <button
+                              onClick={() => updateVisibility('PUBLIC')}
+                              className={`visibility-btn ${level.status === 'PUBLIC' ? 'active' : ''}`}
+                            >
+                              <Eye size={16} />
+                              {t('levelCard.public', 'Public')}
+                            </button>
+                            <button
+                              onClick={() => updateVisibility('UNLISTED')}
+                              className={`visibility-btn ${level.status === 'UNLISTED' ? 'active' : ''}`}
+                            >
+                              <Share2 size={16} />
+                              {t('levelCard.unlisted', 'Unlisted')}
+                            </button>
+                            <button
+                              onClick={() => updateVisibility('PRIVATE')}
+                              className={`visibility-btn ${level.status === 'PRIVATE' ? 'active' : ''}`}
+                            >
+                              <Lock size={16} />
+                              {t('levelCard.private', 'Private')}
+                            </button>
+                          </div>
+                          <div className="menu-divider" style={{ height: '1px', background: 'rgba(255,255,255,0.1)', margin: '8px 0' }}></div>
+                        </>
+                      )}
+
+                      {(sonolusUser.isMod || sonolusUser.isAdmin) && (
+                        <button onClick={toggleStaffPick} className="dropdown-item">
+                          <Star size={14} style={{ marginRight: '8px', opacity: 0.7 }} />
+                          {level.staffPick ? t('levelCard.removeStaffPick', 'Remove Staff Pick') : t('levelCard.setStaffPick', 'Set as Staff Pick')}
+                        </button>
+                      )}
+
+                      {(sonolusUser.isAdmin || sonolusUser.sonolus_id === level.authorId) && (
+                        <>
+                          <div className="menu-divider" style={{ height: '1px', background: 'rgba(255,255,255,0.1)', margin: '8px 0' }}></div>
+                          <button onClick={handleDelete} className="dropdown-item text-red" style={{ color: '#ef4444' }}>
+                            <Trash2 size={14} style={{ marginRight: '8px' }} />
+                            {t('levelCard.deleteChart', 'Delete Chart')}
+                          </button>
+                        </>
+                      )}
+
+                      {sonolusUser.isAdmin && sonolusUser.sonolus_id !== level.authorId && (
+                        <>
+                          <div className="menu-divider" style={{ height: '1px', background: 'rgba(255,255,255,0.1)', margin: '8px 0' }}></div>
+                          <div className="menu-label" style={{ padding: '8px 12px', fontSize: '0.75rem', color: '#64748b', fontWeight: 'bold' }}>
+                            {t('levelCard.adminActions', 'ADMIN ACTIONS')}
+                          </div>
+                          <button onClick={handleBanUser} className="dropdown-item" style={{ color: '#f87171' }}>
+                            <Ban size={14} style={{ marginRight: '8px' }} />
+                            {t('levelCard.banUser', 'Ban User')}
+                          </button>
+                          <button onClick={handleDeleteAccountData} className="dropdown-item" style={{ color: '#ef4444' }}>
+                            <UserX size={14} style={{ marginRight: '8px' }} />
+                            {t('levelCard.deleteAccountData', 'Delete Account Data')}
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
           </div>
@@ -608,51 +842,146 @@ export default function LevelCard({ initialLevel, id, SONOLUS_SERVER_URL }) {
           ) : comments.length > 0 ? (
             <>
               <div className="comments-list" style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                {comments.map((comment, i) => (
-                  <div key={i} className="comment-item" style={{
-                    background: 'rgba(255,255,255,0.05)',
-                    padding: '12px',
-                    borderRadius: '12px',
-                    border: '1px solid rgba(255,255,255,0.1)'
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', alignItems: 'baseline', gap: '8px' }}>
-                      <span className="comment-username-wrapper" style={{
-                        fontWeight: '600',
-                        color: '#38bdf8',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                        maxWidth: '70%',
-                        flexShrink: 1,
-                        display: 'inline-flex',
-                        alignItems: 'center'
-                      }}>
-                        {(comment.user_id || comment.userId || comment.author_id || (comment.user && comment.user.id)) ? (
-                          <Link
-                            href={`/user/${comment.user_id || comment.userId || comment.author_id || (comment.user && comment.user.id)}`}
-                            style={{
-                              color: 'inherit',
-                              textDecoration: 'none',
-                              cursor: 'pointer'
-                            }}
-                            className="hover:underline"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <FormattedText text={comment.username || "User"} />
-                          </Link>
-                        ) : (
-                          <FormattedText text={comment.username || "User"} />
+                {comments.map((comment, i) => {
+                  const commentUserAvatar = (comment.profile_image_hash && level.asset_base_url)
+                    ? `${level.asset_base_url}/${comment.user_id}/profile/${comment.profile_image_hash}`
+                    : DEFAULT_PFP;
+                  const commentUserBanner = (comment.banner_image_hash && level.asset_base_url)
+                    ? `${level.asset_base_url}/${comment.user_id}/banner/${comment.banner_image_hash}`
+                    : null;
+
+                  const bannerUrl = commentUserBanner || "/def.webp";
+
+                  const commentUserLink = comment.user_handle || comment.user_id || comment.userId || comment.author_id || (comment.user && comment.user.id);
+
+                  return (
+                    <div key={i} className="comment-item" style={{
+                      position: 'relative',
+                      background: 'rgba(255,255,255,0.05)',
+                      padding: '12px',
+                      paddingLeft: '52px',
+                      borderRadius: '12px',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      overflow: 'hidden',
+                      transition: 'all 0.3s ease',
+                      '--banner-url': `url(${bannerUrl})`
+                    }}>
+                      <div className="comment-banner-bg" style={{
+                        position: 'absolute',
+                        inset: 0,
+                        backgroundImage: `url(${bannerUrl})`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        opacity: 0,
+                        transition: 'opacity 0.3s ease',
+                        zIndex: 0,
+                        pointerEvents: 'none'
+                      }} />
+
+                      <Link
+                        href={commentUserLink ? `/user/${commentUserLink}` : '#'}
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                          position: 'absolute',
+                          left: '12px',
+                          top: '12px',
+                          width: '32px',
+                          height: '32px',
+                          borderRadius: '50%',
+                          overflow: 'hidden',
+                          border: '2px solid rgba(255,255,255,0.2)',
+                          flexShrink: 0,
+                          zIndex: 2,
+                          background: '#333'
+                        }}
+                      >
+                        <img
+                          src={commentUserAvatar}
+                          alt=""
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          onError={(e) => { e.target.src = DEFAULT_PFP; }}
+                        />
+                      </Link>
+
+                      <div style={{ position: 'relative', zIndex: 1 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', alignItems: 'baseline', gap: '8px' }}>
+                          {commentUserLink ? (
+                            <Link
+                              href={`/user/${commentUserLink}`}
+                              className="comment-username-link"
+                              onClick={(e) => e.stopPropagation()}
+                              style={{
+                                fontWeight: '600',
+                                color: '#38bdf8',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                                maxWidth: '70%',
+                                flexShrink: 1,
+                                display: 'inline-block',
+                                position: 'relative',
+                                zIndex: 2,
+                                textDecoration: 'none',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              <FormattedText text={comment.username || "User"} />
+                            </Link>
+                          ) : (
+                            <span style={{
+                              fontWeight: '600',
+                              color: '#38bdf8',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                              maxWidth: '70%',
+                              flexShrink: 1,
+                              display: 'inline-block'
+                            }}>
+                              <FormattedText text={comment.username || "User"} />
+                            </span>
+                          )}
+                          <span style={{ fontSize: '0.8em', color: 'rgba(255,255,255,0.5)', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                            {comment.created_at ? new Date(comment.created_at).toLocaleDateString() : ""}
+                          </span>
+                        </div>
+                        <div style={{ margin: 0, color: 'rgba(255,255,255,0.9)', fontSize: '0.95em' }}>
+                          <FormattedText text={comment.content} />
+                        </div>
+                        {(sonolusUser && (sonolusUser.isMod || sonolusUser.isAdmin || sonolusUser.sonolus_id === comment.user_id)) && (
+                          <div style={{ marginTop: '8px', display: 'flex', justifyContent: 'flex-end' }}>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (confirm(t('levelDetail.deleteCommentConfirm', 'Delete this comment?'))) {
+                                  handleDeleteComment(comment.id);
+                                }
+                              }}
+                              style={{
+                                background: 'rgba(239, 68, 68, 0.12)',
+                                border: '1px solid rgba(239, 68, 68, 0.25)',
+                                color: '#f87171',
+                                cursor: 'pointer',
+                                padding: '4px 10px',
+                                borderRadius: '6px',
+                                fontSize: '0.78rem',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '5px',
+                                transition: 'all 0.2s ease'
+                              }}
+                              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239, 68, 68, 0.25)'; e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.4)'; }}
+                              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(239, 68, 68, 0.12)'; e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.25)'; }}
+                            >
+                              <Trash2 size={12} />
+                              Delete
+                            </button>
+                          </div>
                         )}
-                      </span>
-                      <span style={{ fontSize: '0.8em', color: 'rgba(255,255,255,0.5)', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                        {comment.created_at ? new Date(comment.created_at).toLocaleDateString() : ""}
-                      </span>
+                      </div>
                     </div>
-                    <div style={{ margin: 0, color: 'rgba(255,255,255,0.9)', fontSize: '0.95em' }}>
-                      <FormattedText text={comment.content} />
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
               {totalPages > 1 && (
                 <div className="comments-pagination" style={{
@@ -729,14 +1058,7 @@ export default function LevelCard({ initialLevel, id, SONOLUS_SERVER_URL }) {
           )}
         </div>
       </div>
-
-      {/* Countdown overlay removed in favor of inline display */}
-      {/* 
-         Actually, I'll put it INLINE inside level-info. 
-         I will NOT use the overlay code at the end of the file.
-         I will insert it in the replacement chunk for level-info or similar.
-      */}
-    </main>
+    </main >
   );
 }
 function formatTime(seconds) {

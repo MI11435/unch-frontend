@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 
-export default function NavLinks({ user, t = (s) => s, onNavClick }) {
+export default function NavLinks({ user, t = (s) => s, onNavClick, isMobile }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const viewParam = searchParams.get('view');
@@ -40,6 +40,7 @@ export default function NavLinks({ user, t = (s) => s, onNavClick }) {
           {t('nav.dashboard') || "Dashboard"}
         </Link>
       )}
+
     </div>
   );
 }

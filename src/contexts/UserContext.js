@@ -11,6 +11,7 @@ export function UserProvider({ children }) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [sonolusUser, setSonolusUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [assetBaseUrl, setAssetBaseUrl] = useState('');
   const [session, setSession] = useState(null);
   const [isClient, setIsClient] = useState(false);
   const [sessionReady, setSessionReady] = useState(false);
@@ -84,7 +85,33 @@ export function UserProvider({ children }) {
           }
         } else {
           const meData = await me.json();
-          setSonolusUser(meData);
+
+          // Normalize admin/mod fields so both naming conventions are available
+          const normalizeRoles = (user) => ({
+            ...user,
+            isAdmin: !!(user.isAdmin || user.admin),
+            isMod: !!(user.isMod || user.mod),
+            admin: !!(user.isAdmin || user.admin),
+            mod: !!(user.isMod || user.mod),
+          });
+
+          setSonolusUser(normalizeRoles(meData));
+
+          // Fetch full account data (banner_hash, profile_hash, asset_base_url)
+          if (meData.sonolus_id) {
+            try {
+              const profileRes = await fetch(`${APILink}/api/accounts/${meData.sonolus_id}`);
+              if (profileRes.ok) {
+                const profileData = await profileRes.json();
+                setAssetBaseUrl(profileData.asset_base_url || '');
+                if (profileData.account) {
+                  setSonolusUser(prev => normalizeRoles({ ...prev, ...profileData.account }));
+                }
+              }
+            } catch (e) {
+              // Full profile fetch failed, banner/pfp won't show in header
+            }
+          }
         }
 
       } catch (error) {
@@ -150,6 +177,7 @@ export function UserProvider({ children }) {
   const value = {
     isLoggedIn,
     sonolusUser,
+    assetBaseUrl,
     loading,
     session,
     isClient,

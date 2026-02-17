@@ -9,6 +9,7 @@ import AudioVisualizer from "../audio-visualizer/AudioVisualizer";
 import LiquidSelect from "../liquid-select/LiquidSelect";
 import { formatBytes } from "../../utils/byteUtils";
 import FormattedText from "../formatted-text/FormattedText";
+import EmojiSuggestion from "../emoji-suggestion/EmojiSuggestion";
 
 // Helper function to validate level input
 const validateLevelValue = (val) => {
@@ -156,6 +157,12 @@ export default function ChartModal({
   const [currentlyPlaying, setCurrentlyPlaying] = useState(null);
   const audioRefs = useRef({});
 
+  // Emoji refs and state
+  const descriptionEditRef = useRef(null);
+  const descriptionUpRef = useRef(null);
+  const [emojiOpenEdit, setEmojiOpenEdit] = useState(false);
+  const [emojiOpenUp, setEmojiOpenUp] = useState(false);
+
   const handlePlay = (id) => {
     Object.keys(audioRefs.current).forEach(key => {
       if (key !== id && audioRefs.current[key]) {
@@ -218,7 +225,24 @@ export default function ChartModal({
                 onWheel={(e) => e.target.blur()}
               />
 
-              <ModalTextarea id="description_edit" label={t('modal.description', 'Description (Optional)')} value={form.description} onChange={onUpdate("description")} maxLength={limits?.text?.description || 1000} placeholder="Any comments or details..." />
+              <div className="relative">
+                <ModalTextarea
+                  id="description_edit"
+                  label={t('modal.description', 'Description (Optional)')}
+                  value={form.description}
+                  onChange={onUpdate("description")}
+                  maxLength={limits?.text?.description || 1000}
+                  placeholder="Any comments or details..."
+                  ref={descriptionEditRef}
+                />
+                <EmojiSuggestion
+                  value={form.description}
+                  textareaRef={descriptionEditRef}
+                  onSelect={(newVal) => onUpdate("description")(newVal)}
+                  isOpen={emojiOpenEdit}
+                  setIsOpen={setEmojiOpenEdit}
+                />
+              </div>
 
               <ModalInput id="tags_edit" label={t('modal.tags', 'Tags')} value={form.tags} onChange={onUpdate("tags")} placeholder="e.g. Touhou, Vocaloid" />
 
@@ -564,7 +588,24 @@ export default function ChartModal({
                 onWheel={(e) => e.target.blur()}
               />
 
-              <ModalTextarea id="description_up" label={t('modal.description', 'Description (Optional)')} value={form.description} onChange={onUpdate("description")} maxLength={limits?.text?.description || 1000} placeholder="Any comments or details..." />
+              <div className="relative">
+                <ModalTextarea
+                  id="description_up"
+                  label={t('modal.description', 'Description (Optional)')}
+                  value={form.description}
+                  onChange={onUpdate("description")}
+                  maxLength={limits?.text?.description || 1000}
+                  placeholder="Any comments or details..."
+                  ref={descriptionUpRef}
+                />
+                <EmojiSuggestion
+                  value={form.description}
+                  textareaRef={descriptionUpRef}
+                  onSelect={(newVal) => onUpdate("description")(newVal)}
+                  isOpen={emojiOpenUp}
+                  setIsOpen={setEmojiOpenUp}
+                />
+              </div>
 
               <ModalInput id="tags_up" label={t('modal.tags', 'Tags')} value={form.tags} onChange={onUpdate("tags")} placeholder="e.g. Touhou, Vocaloid" />
 

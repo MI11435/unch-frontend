@@ -55,6 +55,16 @@ function HomeContent() {
   const [tags, setTags] = useState("");
   const [likedBy, setLikedBy] = useState(false);
   const [staffPick, setStaffPick] = useState(false);
+  const [sonolusHandleIs, setSonolusHandleIs] = useState("");
+
+  useEffect(() => {
+    const handle = searchParams.get('sonolus_handle_is');
+    if (handle) {
+      setSonolusHandleIs(handle);
+      setSearchType('advanced');
+      setViewMode('search');
+    }
+  }, [searchParams]);
 
   const [currentlyPlaying, setCurrentlyPlaying] = useState(null);
   const audioRefs = useRef({});
@@ -166,6 +176,7 @@ function HomeContent() {
         if (titleIncludes) queryParams.append('title_includes', titleIncludes);
         if (descriptionIncludes) queryParams.append('description_includes', descriptionIncludes);
         if (artistsIncludes) queryParams.append('artists_includes', artistsIncludes);
+        if (sonolusHandleIs) queryParams.append('sonolus_handle_is', sonolusHandleIs);
         if (searchQuery) queryParams.append('meta_includes', searchQuery);
 
         queryParams.append('sort_by', sortBy);
@@ -676,6 +687,16 @@ function HomeContent() {
                         placeholder="Comma-separated tags"
                         value={tags}
                         onChange={(e) => setTags(e.target.value)}
+                        className="liquid-input"
+                      />
+                    </div>
+                    <div className="search-control-group">
+                      <label>{t('search.authorHandle', 'Author Handle')}</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. 78302"
+                        value={sonolusHandleIs}
+                        onChange={(e) => setSonolusHandleIs(e.target.value)}
                         className="liquid-input"
                       />
                     </div>

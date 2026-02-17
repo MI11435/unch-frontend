@@ -100,6 +100,16 @@ body * {
   }
 }
 
+@keyframes fadeInOpacity {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
 @keyframes slideUp {
   from {
     opacity: 0;
@@ -153,7 +163,7 @@ body * {
 }
 
 .animate-fade-in {
-  animation: fadeIn 0.3s ease-out;
+  animation: fadeInOpacity 0.3s ease-out;
 }
 
 .animate-slide-up {

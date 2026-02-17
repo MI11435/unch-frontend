@@ -128,7 +128,6 @@ const DashboardChartItem = memo(
     const onStatusChange = async (e) => {
       const next = e.target.value;
 
-      // If PUBLIC chosen -> open schedule menu (user can still choose "Public Now")
       if (next === "PUBLIC") {
         openScheduleMenu();
         return;
@@ -284,7 +283,7 @@ const DashboardChartItem = memo(
                 {/* Schedule */}
                 <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
                   <div className="text-xs opacity-75">
-                    {t("dashboard.schedulePublish", "Schedule publish")}
+                    {t("dashboard.schedulePublish", "Publish Schedule")}
                   </div>
 
                   <input

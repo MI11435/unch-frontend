@@ -6,7 +6,7 @@ export const alt = 'User Profile';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
-const DEFAULT_PFP = "https://yt3.googleusercontent.com/kyRX8fESnlAo8xoThhWanH8geyT_U6JIOgTAOU8D1PfzMXl_BW95y06R_sGNKosi_E2arwN9=s160-c-k-c0x00ffffff-no-rj";
+const DEFAULT_PFP = process.env.NEXT_PUBLIC_APP_URL ? `${process.env.NEXT_PUBLIC_APP_URL}/defpfp.webp` : "http://localhost:3000/defpfp.webp";
 
 export default async function Image({ params }) {
     const { id } = params;
@@ -16,6 +16,7 @@ export default async function Image({ params }) {
     let pfpData = null;
     let accountData = null;
     let charts = [];
+    let assetBaseUrl = null;
 
     // Fetch logo
     try {
@@ -28,29 +29,60 @@ export default async function Image({ params }) {
 
     // Fetch account data
     try {
-        const res = await fetch(`${apiUrl}/api/accounts/${id}`);
-        if (res.ok) {
-            const json = await res.json();
-            accountData = json.account;
-            charts = json.charts || [];
+        let data = null;
+
+        // 1. Try fetching by Handle
+        try {
+            const handleRes = await fetch(`${apiUrl}/api/accounts/handle/${id}/`);
+            if (handleRes.ok) {
+                const handleData = await handleRes.json();
+                if (handleData.sonolus_id) {
+                    const profileRes = await fetch(`${apiUrl}/api/accounts/${handleData.sonolus_id}`);
+                    if (profileRes.ok) {
+                        data = await profileRes.json();
+                    }
+                }
+            }
+        } catch (e) { }
+
+        // 2. Fallback to direct ID fetch
+        if (!data) {
+            const res = await fetch(`${apiUrl}/api/accounts/${id}`);
+            if (res.ok) {
+                data = await res.json();
+            }
+        }
+
+        if (data && data.account) {
+            accountData = data.account;
+            charts = data.charts || [];
+            assetBaseUrl = data.asset_base_url;
         }
     } catch (e) { }
 
-    // Custom Profile Logic
     // Use NEXT_PUBLIC_APP_URL for local public assets
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001';
 
-    const customProfile = accountData ? (customProfiles[accountData.id] || customProfiles[accountData.sonolus_id] || customProfiles[id]) : null;
-
     // Resolve PFP URL
-    const pfpUrl = customProfile?.pfp ?
-        (customProfile.pfp.startsWith('http') ? customProfile.pfp : `${appUrl}${customProfile.pfp}`)
-        : DEFAULT_PFP;
+    let pfpUrl = DEFAULT_PFP;
+    if (accountData?.profile_hash && assetBaseUrl) {
+        pfpUrl = `${assetBaseUrl}/${accountData.sonolus_id}/profile/${accountData.profile_hash}`;
+    } else {
+        const customProfile = accountData ? (customProfiles[accountData.id] || customProfiles[accountData.sonolus_id] || customProfiles[id]) : null;
+        if (customProfile?.pfp) {
+            pfpUrl = customProfile.pfp.startsWith('http') ? customProfile.pfp : `${appUrl}${customProfile.pfp}`;
+        }
+    }
 
     // Resolve Banner URL
     let bannerUrl = null;
-    if (customProfile?.banner) {
-        bannerUrl = customProfile.banner.startsWith('http') ? customProfile.banner : `${appUrl}${customProfile.banner}`;
+    if (accountData?.banner_hash && assetBaseUrl) {
+        bannerUrl = `${assetBaseUrl}/${accountData.sonolus_id}/banner/${accountData.banner_hash}`;
+    } else {
+        const customProfile = accountData ? (customProfiles[accountData.id] || customProfiles[accountData.sonolus_id] || customProfiles[id]) : null;
+        if (customProfile?.banner) {
+            bannerUrl = customProfile.banner.startsWith('http') ? customProfile.banner : `${appUrl}${customProfile.banner}`;
+        }
     }
 
     // Calculate stats

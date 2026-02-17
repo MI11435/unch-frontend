@@ -6,9 +6,32 @@ export async function generateMetadata({ params }) {
     // Fetch account data
     let account = null;
     try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/accounts/${id}`);
-        if (res.ok) {
-            const data = await res.json();
+        const apiBase = process.env.NEXT_PUBLIC_API_URL;
+        let data = null;
+
+        // 1. Try fetching by Handle
+        try {
+            const handleRes = await fetch(`${apiBase}/api/accounts/handle/${id}/`);
+            if (handleRes.ok) {
+                const handleData = await handleRes.json();
+                if (handleData.sonolus_id) {
+                    const profileRes = await fetch(`${apiBase}/api/accounts/${handleData.sonolus_id}`);
+                    if (profileRes.ok) {
+                        data = await profileRes.json();
+                    }
+                }
+            }
+        } catch (e) { }
+
+        // 2. Fallback to direct ID fetch
+        if (!data) {
+            const res = await fetch(`${apiBase}/api/accounts/${id}`);
+            if (res.ok) {
+                data = await res.json();
+            }
+        }
+
+        if (data && data.account) {
             account = data.account;
         }
     } catch (e) {

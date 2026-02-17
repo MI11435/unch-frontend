@@ -112,6 +112,7 @@ export default async function Image({ params }) {
     let assetBaseUrl = null;
     let jacketData = null;
     let backgroundData = null;
+    let authorPfpData = null;
 
     try {
         const res = await fetch(`${apiUrl}/api/charts/${cleanId}/`);
@@ -157,6 +158,29 @@ export default async function Image({ params }) {
                         }
                     } catch (e) { }
                 }
+
+                // Fetch Author Profile for PFP
+                try {
+                    const authorRes = await fetch(`${apiUrl}/api/accounts/${levelData.author}`);
+                    if (authorRes.ok) {
+                        const authorJson = await authorRes.json();
+                        const authorAccount = authorJson.account;
+                        if (authorAccount && authorAccount.profile_hash) {
+                            const pfpUrl = `${assetBaseUrl}/${levelData.author}/profile/${authorAccount.profile_hash}`;
+                            const pfpRes = await fetch(pfpUrl);
+                            if (pfpRes.ok) {
+                                const buffer = await pfpRes.arrayBuffer();
+                                const bytes = new Uint8Array(buffer);
+                                let mimeType = 'image/png';
+                                if (bytes[0] === 0xFF && bytes[1] === 0xD8 && bytes[2] === 0xFF) mimeType = 'image/jpeg';
+                                else if (bytes[0] === 0x52 && bytes[1] === 0x49) mimeType = 'image/webp'; // RIFF -> webp
+                                let binary = '';
+                                for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+                                authorPfpData = `data:${mimeType};base64,${btoa(binary)}`;
+                            }
+                        }
+                    }
+                } catch (e) { console.error("Author PFP fetch failed", e); }
             }
         }
     } catch (e) { }
@@ -376,31 +400,37 @@ export default async function Image({ params }) {
                         boxShadow: '0 30px 60px rgba(0,0,0,0.6)',
                         flexShrink: 0,
                         display: 'flex',
+                        position: 'relative', // For badge positioning
                     }}>
                         {jacketData ? (
                             <img src={jacketData} width={300} height={300} style={{ objectFit: 'cover' }} />
                         ) : (
                             <div style={{ width: '100%', height: '100%', background: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 80 }}>🎵</div>
                         )}
+                        {/* Level Badge - Overlay on Jacket */}
+                        <div style={{
+                            position: 'absolute',
+                            top: 12,
+                            right: 12,
+                            fontSize: 18,
+                            fontWeight: 700,
+                            color: '#38bdf8',
+                            background: 'rgba(0,0,0,0.7)',
+                            backdropFilter: 'blur(8px)',
+                            border: '1px solid rgba(255,255,255,0.2)',
+                            borderRadius: 8,
+                            padding: '4px 12px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            zIndex: 10
+                        }}>
+                            Lv. {levelData.rating || '?'}
+                        </div>
                     </div>
 
                     {/* Text Info */}
                     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, justifyContent: 'center' }}>
-                        {/* Level Badge - BLUE */}
-                        <div style={{
-                            fontSize: 18,
-                            color: '#38bdf8',
-                            background: 'rgba(56, 189, 248, 0.15)',
-                            padding: '6px 20px',
-                            borderRadius: 50,
-                            border: '1px solid rgba(56, 189, 248, 0.5)',
-                            fontWeight: 700,
-                            marginBottom: 20,
-                            display: 'flex',
-                            alignSelf: 'flex-start',
-                        }}>
-                            Lv. {levelData.rating || '?'}
-                        </div>
+
 
                         {/* Title */}
                         <div style={{ fontSize: 60, fontWeight: 700, color: 'white', lineHeight: 1.05, marginBottom: 16, display: 'flex', alignItems: 'center', flexWrap: 'wrap', textShadow: '0 4px 12px rgba(0,0,0,0.4)' }}>
@@ -414,6 +444,24 @@ export default async function Image({ params }) {
 
                         {/* Charter */}
                         <div style={{ fontSize: 24, color: '#94a3b8', display: 'flex', alignItems: 'center', flexWrap: 'wrap', marginBottom: 28 }}>
+                            <div style={{
+                                width: 32,
+                                height: 32,
+                                borderRadius: '50%',
+                                overflow: 'hidden',
+                                marginRight: 12,
+                                border: '2px solid rgba(255,255,255,0.2)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                background: '#1e293b'
+                            }}>
+                                {authorPfpData ? (
+                                    <img src={authorPfpData} width={32} height={32} style={{ objectFit: 'cover' }} />
+                                ) : (
+                                    <div style={{ width: 32, height: 32, background: '#334155' }}></div>
+                                )}
+                            </div>
                             Charted by {renderTextWithEmojis((levelData.author_full || levelData.author || 'Unknown').slice(0, 30), 24)}
                         </div>
 

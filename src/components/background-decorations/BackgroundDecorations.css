@@ -146,6 +146,8 @@ body:not(.light-mode) .bg-grid-pattern {
     justify-content: space-around;
     padding: 10vh 3vw;
     overflow: hidden;
+    contain: layout style;
+    will-change: transform;
 }
 
 .bg-text {

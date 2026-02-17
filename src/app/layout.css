@@ -217,21 +217,92 @@ body.light-mode .header-lang-select {
     opacity: 0.5;
 }
 
+/* Redesigned User Profile Trigger (Button) */
+.user-profile.redesigned-trigger {
+    height: 40px;
+    /* Force compact height */
+    padding: 0 6px 0 6px;
+    /* Reduced padding */
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.2s ease;
+    width: auto;
+    max-width: 220px;
+    /* Limit width */
+    background-size: cover;
+    background-position: center;
+}
+
+.user-profile.redesigned-trigger:hover {
+    filter: brightness(1.1);
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
+.user-profile.redesigned-trigger .user-avatar {
+    width: 28px;
+    /* Slightly larger than original 24px but fitting */
+    height: 28px;
+    flex-shrink: 0;
+    border: 2px solid rgba(255, 255, 255, 0.8);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    border-radius: 50%;
+    z-index: 2;
+    position: relative;
+}
+
+.user-profile.redesigned-trigger .user-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: white;
+    z-index: 2;
+    position: relative;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 120px;
+}
+
+.user-profile.redesigned-trigger .dropdown-arrow {
+    color: rgba(255, 255, 255, 0.9);
+    z-index: 2;
+    position: relative;
+    font-size: 0.7rem;
+}
+
+/* Trigger Overlay */
+.trigger-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    /* Darken banner for text readability */
+    z-index: 1;
+}
+
+/* Reverted Dropdown Style */
 .user-dropdown {
     position: absolute;
     top: 100%;
     right: 0;
     margin-top: 12px;
-    background: rgba(15, 23, 42, 0.9);
+    background: rgba(15, 23, 42, 0.95);
     backdrop-filter: blur(20px);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 16px;
+    border-radius: 12px;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
     min-width: 180px;
     z-index: 100;
-    padding: 8px;
+    padding: 6px;
     overflow: hidden;
     animation: dropdownFade 0.2s ease-out;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
 }
 
 @keyframes dropdownFade {
@@ -249,34 +320,43 @@ body.light-mode .header-lang-select {
 .dropdown-item {
     display: flex;
     align-items: center;
-    gap: 12px;
-    width: 100%;
-    padding: 10px 14px;
-    text-align: left;
-    background: none;
-    border: none;
-    color: var(--foreground);
-    font-size: 0.95rem;
+    gap: 10px;
+    padding: 10px 12px;
+    color: rgba(255, 255, 255, 0.8);
+    text-decoration: none;
+    border-radius: 8px;
+    transition: all 0.2s;
     font-weight: 500;
+    font-size: 0.9rem;
+    background: transparent;
+    border: none;
+    width: 100%;
+    text-align: left;
     cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    border-radius: 10px;
 }
 
 .dropdown-item:hover {
     background: rgba(255, 255, 255, 0.1);
-    color: var(--primary);
-    padding-left: 18px;
+    color: white;
 }
 
-.dropdown-item.logout-btn {
+.dropdown-item svg {
+    opacity: 0.7;
+}
+
+.dropdown-item:hover svg {
+    opacity: 1;
+}
+
+.logout-btn {
+    color: #fca5a5;
+}
+
+.logout-btn:hover {
+    background: rgba(239, 68, 68, 0.15);
     color: #f87171;
 }
 
-.dropdown-item.logout-btn:hover {
-    background: rgba(239, 68, 68, 0.1);
-    color: #ef4444;
-}
 
 .login-nav-link {
     text-decoration: none;
@@ -853,6 +933,28 @@ body.light-mode .nav-links a.active {
     transition: all 0.2s;
 }
 
+.mobile-logout-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--foreground);
+    border-radius: 12px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+}
+
+.mobile-logout-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
 .mobile-login-btn:hover {
     background: var(--primary);
     color: white;
@@ -1336,7 +1438,7 @@ body:not(.light-mode) .bg-grid-pattern {
     background: linear-gradient(to top, var(--background), var(--glass-bg));
     border-top: 1px solid var(--glass-border);
     overflow: visible;
-    z-index: 0;
+    z-index: 10;
 }
 
 .footer-miku {

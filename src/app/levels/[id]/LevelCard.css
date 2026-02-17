@@ -4,7 +4,12 @@
     position: relative;
     box-sizing: border-box;
     width: 100%;
+    /* Ensure no height restriction or overflow that causes inner scroll */
+    min-height: auto;
+    height: auto;
+    overflow: visible;
 }
+
 
 .level-bg-blur {
     position: fixed;
@@ -313,6 +318,42 @@
     cursor: pointer;
 }
 
+.player-progress-slider {
+    width: 100%;
+    height: 4px;
+    appearance: none;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+    cursor: pointer;
+    margin: 0;
+    padding: 0;
+}
+
+.player-progress-slider::-webkit-slider-thumb {
+    appearance: none;
+    width: 12px;
+    height: 12px;
+    background: #38bdf8;
+    border-radius: 50%;
+    cursor: pointer;
+    margin-top: -4px;
+}
+
+.player-progress-slider::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    background: #38bdf8;
+    border-radius: 50%;
+    cursor: pointer;
+    border: none;
+}
+
+.player-progress-slider::-webkit-slider-runnable-track {
+    height: 4px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+}
+
 .waveform-container {
     flex: 1;
     position: relative;
@@ -374,29 +415,38 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 10px 16px;
-    border-radius: 8px;
-    border: 1px solid var(--glass-border);
-    background: rgba(255, 255, 255, 0.05);
+    padding: 10px 20px;
+    border-radius: 50px;
+    border: none;
+    background: rgba(255, 255, 255, 0.1);
     color: white;
     font-size: 14px;
-    font-weight: 500;
+    font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.2s ease;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .action-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
-    transform: translateY(-2px);
+    background: rgba(255, 255, 255, 0.15);
+    transform: translateY(-1px);
+    box-shadow: 0 5px 12px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.action-btn:active {
+    transform: translateY(1px);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
 }
 
 .btn-sonolus {
     background: #38bdf8;
-    border-color: #38bdf8;
+    color: white;
+    box-shadow: 0 3px 8px rgba(56, 189, 248, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 .btn-sonolus:hover {
     background: #0ea5e9;
+    box-shadow: 0 5px 14px rgba(56, 189, 248, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 
 .sonolus-text {
@@ -405,12 +455,13 @@
 }
 
 .btn-favorite {
-    background: rgba(239, 68, 68, 0.1);
-    border-color: rgba(239, 68, 68, 0.3);
+    background: rgba(239, 68, 68, 0.15);
+    box-shadow: 0 3px 8px rgba(239, 68, 68, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .btn-favorite:hover {
-    background: rgba(239, 68, 68, 0.2);
+    background: rgba(239, 68, 68, 0.25);
+    box-shadow: 0 5px 12px rgba(239, 68, 68, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .level-bottom-section {
@@ -1194,6 +1245,106 @@ body.light-mode .btn-sonolus:hover {
 
 body.light-mode .player-text span {
     color: #0f172a !important;
+}
+
+/* Visibility Menu Grid */
+.visibility-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    padding: 8px;
+    margin-bottom: 8px;
+}
+
+.visibility-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    color: #94a3b8;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.visibility-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+}
+
+.visibility-btn.active {
+    background: rgba(56, 189, 248, 0.1);
+    border-color: rgba(56, 189, 248, 0.3);
+    color: #38bdf8;
+}
+
+.visibility-btn svg {
+    margin-bottom: 4px;
+}
+
+/* Comment Card Banner Hover Effect */
+.comment-item:hover .comment-banner-bg {
+    opacity: 0.15 !important;
+}
+
+.comment-item:hover {
+    border-color: rgba(56, 189, 248, 0.2) !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+}
+
+.comment-item {
+    cursor: default;
+}
+
+.comment-username-link:hover {
+    text-decoration: underline;
+}
+
+/* Lv Badge on Jacket */
+.lv-badge {
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+    user-select: none;
+}
+
+/* Marquee Styles for Title */
+.marquee-container {
+    overflow: hidden;
+    white-space: nowrap;
+    width: 100%;
+    position: relative;
+    mask-image: linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%);
+}
+
+.marquee-track {
+    display: flex;
+    gap: 2rem;
+    width: max-content;
+    animation: marquee-scroll linear infinite;
+}
+
+@keyframes marquee-scroll {
+    from {
+        transform: translateX(0);
+    }
+
+    to {
+        /* Move half the width plus half the gap (gap is 2rem, scrol -1rem) */
+        transform: translateX(calc(-50% - 1rem));
+    }
+}
+
+/* Ensure no override on mobile */
+@media (max-width: 768px) {
+    .marquee-container {
+        mask-image: linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%);
+        -webkit-mask-image: linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%);
+    }
 }
 
 /* End of file */

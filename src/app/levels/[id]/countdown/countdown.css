@@ -9,7 +9,7 @@
     align-items: center;
     justify-content: center;
     z-index: 9999;
-    overflow: hidden;
+    /* overflow: hidden;  <-- Removed to allow scrolling if needed, though this is a full screen overlay */
 }
 
 /* Navigation */

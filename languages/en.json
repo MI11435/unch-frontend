@@ -9,9 +9,9 @@
   },
   "userProfile": {
     "back": "Back",
-    "charts": "Charts",
+    "charts": "Popular Charts",
     "noCharts": "This User hasn't made any charts yet :<",
-    "stats": "Chart Statistics",
+    "stats": "Statistics",
     "totalCharts": "Charts",
     "charts_singular": "{1} Chart",
     "charts_plural": "{1} Charts",

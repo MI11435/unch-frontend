@@ -12,7 +12,7 @@ import { Menu, X, Sun, Moon, Globe, User, LogOut } from "lucide-react";
 import LiquidSelect from "../components/liquid-select/LiquidSelect";
 
 function HeaderContent() {
-    const { isLoggedIn, sonolusUser, handleLogout } = useUser();
+    const { isLoggedIn, sonolusUser, assetBaseUrl, handleLogout } = useUser();
     const { t, language, changeLanguage, supportedLangs } = useLanguage();
     const { theme, toggleTheme } = useTheme();
     const [showDropdown, setShowDropdown] = useState(false);
@@ -96,25 +96,45 @@ function HeaderContent() {
                         {isLoggedIn && sonolusUser ? (
                             <div className="user-profile-container">
                                 <div
-                                    className="user-profile"
+                                    className="user-profile redesigned-trigger"
                                     onClick={() => setShowDropdown(!showDropdown)}
+                                    style={{
+                                        backgroundImage: `url(${sonolusUser.banner_hash && assetBaseUrl
+                                            ? `${assetBaseUrl}/${sonolusUser.sonolus_id}/banner/${sonolusUser.banner_hash}`
+                                            : '/def.webp'})`,
+                                        backgroundSize: 'cover',
+                                        backgroundPosition: 'center',
+                                        backgroundColor: 'rgba(255, 255, 255, 0.05)'
+                                    }}
                                 >
-                                    <div className="user-avatar">
-                                        <div
-                                            className="default-avatar"
-                                            style={{
-                                                backgroundColor: "#000020ff",
-                                                color: "#ffffffff"
-                                            }}
-                                        >
-                                            {sonolusUser.sonolus_username.charAt(0).toUpperCase()}
-                                        </div>
+                                    <div className="trigger-overlay"></div>
+
+                                    <div className="user-avatar" style={{ zIndex: 2, position: 'relative' }}>
+                                        <img
+                                            src={sonolusUser.profile_hash && assetBaseUrl
+                                                ? `${assetBaseUrl}/${sonolusUser.sonolus_id}/profile/${sonolusUser.profile_hash}`
+                                                : "/defpfp.webp"
+                                            }
+                                            alt="Avatar"
+                                            style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover', background: '#000020' }}
+                                            onError={(e) => { e.target.src = "/defpfp.webp"; }}
+                                        />
                                     </div>
-                                    <span className="user-name">{sonolusUser.sonolus_username}</span>
-                                    <span className="dropdown-arrow">▼</span>
+                                    <span className="user-name" style={{ zIndex: 2, position: 'relative', textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>
+                                        {sonolusUser.sonolus_username}
+                                    </span>
+                                    <span className="dropdown-arrow" style={{ zIndex: 2, position: 'relative' }}>▼</span>
                                 </div>
                                 {showDropdown && (
                                     <div className="user-dropdown">
+                                        <Link
+                                            href={`/user/${sonolusUser.sonolus_handle || sonolusUser.sonolus_id}`}
+                                            className="dropdown-item"
+                                            onClick={() => setShowDropdown(false)}
+                                        >
+                                            <User size={16} />
+                                            {t('nav.profile', 'Profile')}
+                                        </Link>
                                         <button
                                             className="dropdown-item logout-btn"
                                             onClick={handleLogout}
@@ -173,7 +193,7 @@ function HeaderContent() {
                     {/* Body Content with staggered animations */}
                     <div className="mobile-menu-body">
                         <Suspense fallback={null}>
-                            <NavLinks user={sonolusUser} t={t} onNavClick={handleMobileMenuClose} />
+                            <NavLinks user={sonolusUser} t={t} onNavClick={handleMobileMenuClose} isMobile={true} />
                         </Suspense>
 
                         <div className="mobile-menu-divider"></div>
@@ -198,9 +218,19 @@ function HeaderContent() {
                                         </div>
                                         <span>{sonolusUser.sonolus_username}</span>
                                     </div>
-                                    <button onClick={handleLogout} className="mobile-logout-btn">
-                                        {t('nav.logout')}
-                                    </button>
+                                    <div style={{ display: 'flex', gap: '8px' }}>
+                                        <Link
+                                            href={`/user/${sonolusUser.sonolus_handle || sonolusUser.sonolus_id}`}
+                                            className="mobile-logout-btn"
+                                            style={{ background: 'rgba(56, 189, 248, 0.1)', color: '#38bdf8', textDecoration: 'none' }}
+                                            onClick={() => setMobileMenuOpen(false)}
+                                        >
+                                            {t('nav.profile', 'Profile')}
+                                        </Link>
+                                        <button onClick={handleLogout} className="mobile-logout-btn">
+                                            {t('nav.logout')}
+                                        </button>
+                                    </div>
                                 </div>
                             ) : (
                                 <Link href="/login" className="mobile-login-btn" onClick={() => setMobileMenuOpen(false)}>
@@ -226,7 +256,7 @@ function FooterContent() {
     return (
         <footer className="site-footer">
             <div className="footer-bg">
-                <img src="/636a8f1e76b38cb1b9eb0a3d88d7df6f.png" alt="Logo Background" className="footer-bg-logo" />
+                <img src="/636a8f1e76b38cb1b9eb0a3d88d7df6f.png" alt="Logo Background" className="footer-bg-logo" width="200" height="200" />
             </div>
 
             <div className="footer-content">
@@ -235,6 +265,8 @@ function FooterContent() {
                         src="/miku-sitting.png"
                         alt="Miku"
                         className="footer-miku"
+                        width="80"
+                        height="120"
                     />
                     <h2 className="footer-brand">{t('common.brandName')}</h2>
                     <div className="footer-sonolus-btn-container" style={{ marginTop: '12px' }}>
