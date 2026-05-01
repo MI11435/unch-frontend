@@ -56,9 +56,13 @@ const FormattedText = ({ text, className = "" }) => {
                                     src={src}
                                     alt={emojiName}
                                     className="inline-emote"
+                                    width="40"
+                                    height="40"
+                                    loading="lazy"
+                                    decoding="async"
                                 />
                                 <span className="emoji-tooltip">
-                                    <img src={src} alt={emojiName} className="emoji-tooltip-image" />
+                                    <img src={src} alt={emojiName} className="emoji-tooltip-image" width="40" height="40" loading="lazy" />
                                     <span className="emoji-tooltip-name">:{emojiName}:</span>
                                 </span>
                             </span>

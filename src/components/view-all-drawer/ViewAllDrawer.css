@@ -100,7 +100,15 @@
     background: rgba(255, 255, 255, 0.2);
     border-radius: 3px;
     margin: 0 auto 16px;
-    cursor: pointer;
+    cursor: grab;
+    padding: 12px 40px;
+    box-sizing: content-box;
+    background-clip: content-box;
+    touch-action: none;
+}
+
+.drawer-handle:active {
+    cursor: grabbing;
 }
 
 .drawer-title-row {
@@ -138,6 +146,8 @@
 
 .drawer-search {
     position: relative;
+    display: flex;
+    align-items: center;
 }
 
 .search-icon {
@@ -146,11 +156,13 @@
     top: 50%;
     transform: translateY(-50%);
     color: rgba(255, 255, 255, 0.4);
+    pointer-events: none;
+    z-index: 1;
 }
 
 .drawer-search input {
     width: 100%;
-    padding: 12px 12px 12px 40px;
+    padding: 12px 16px 12px 42px;
     border-radius: 12px;
     background: rgba(0, 0, 0, 0.3);
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -158,6 +170,7 @@
     font-size: 0.95rem;
     outline: none;
     transition: all 0.2s;
+    box-sizing: border-box;
 }
 
 .drawer-search input:focus {

@@ -152,6 +152,7 @@ export default function EditProfileModal({ isOpen, onClose, user, onUpdate, asse
                 setBannerPreview(null);
             }
             onUpdate();
+            onClose();
         } catch (e) {
             console.error(e);
             setError(e.message);

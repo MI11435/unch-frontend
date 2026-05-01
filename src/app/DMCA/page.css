@@ -1,217 +1,255 @@
 .dmca-page {
     position: relative;
-    width: 100%;
     min-height: 100vh;
-    padding-bottom: 80px;
-    box-sizing: border-box;
+    padding-bottom: 100px;
+    overflow: hidden;
 }
 
-.dmca-bg-blur {
+.dmca-orb {
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(135deg, rgba(30, 41, 59, 0.4) 0%, rgba(15, 23, 42, 0.6) 100%);
-    z-index: 0;
-    pointer-events: none;
-}
-
-.dmca-container {
-    max-width: 1000px;
-    margin: 0 auto;
-    position: relative;
-    z-index: 10;
-    padding: 0 20px;
-}
-
-.dmca-header {
-    text-align: center;
-    margin-bottom: 50px;
-}
-
-.icon-container {
-    width: 64px;
-    height: 64px;
-    background: rgba(239, 68, 68, 0.1);
-    border: 1px solid rgba(239, 68, 68, 0.2);
     border-radius: 50%;
-    display: flex;
+    filter: blur(80px);
+    pointer-events: none;
+    z-index: 0;
+}
+
+.dmca-orb-1 {
+    width: 500px;
+    height: 500px;
+    background: radial-gradient(circle, rgba(56, 189, 248, 0.12) 0%, transparent 70%);
+    top: -100px;
+    left: -100px;
+}
+
+.dmca-orb-2 {
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(99, 102, 241, 0.1) 0%, transparent 70%);
+    bottom: 10%;
+    right: -80px;
+}
+
+.dmca-orb-3 {
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(239, 68, 68, 0.07) 0%, transparent 70%);
+    top: 40%;
+    left: 50%;
+}
+
+.dmca-inner {
+    position: relative;
+    z-index: 1;
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 110px 24px 0;
+}
+
+.dmca-back {
+    display: inline-flex;
     align-items: center;
-    justify-content: center;
-    color: #ef4444;
-    margin: 0 auto 20px;
-    box-shadow: 0 8px 32px rgba(239, 68, 68, 0.2);
+    gap: 6px;
+    color: rgba(255,255,255,0.5);
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+    margin-bottom: 48px;
+    transition: color 0.2s;
+}
+
+.dmca-back:hover { color: rgba(255,255,255,0.9); }
+
+.dmca-hero {
+    text-align: center;
+    margin-bottom: 64px;
 }
 
 .dmca-title {
-    font-size: 2.5rem;
-    font-weight: 800;
+    font-size: clamp(2rem, 5vw, 3rem);
+    font-weight: 900;
     color: white;
-    margin-bottom: 10px;
+    margin: 0 0 12px;
     letter-spacing: -0.5px;
+    background: linear-gradient(135deg, #fff 0%, #94a3b8 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
 }
 
 .dmca-subtitle {
-    font-size: 1.1rem;
-    color: var(--foreground-muted);
+    font-size: 1.05rem;
+    color: rgba(255,255,255,0.5);
+    max-width: 480px;
+    margin: 0 auto;
+    line-height: 1.6;
 }
 
-.tutorial-steps {
+.dmca-timeline {
     display: flex;
     flex-direction: column;
-    gap: 30px;
+    gap: 0;
 }
 
-.step-card {
-    background: rgba(15, 23, 42, 0.6);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid var(--glass-border);
-    border-radius: 20px;
-    padding: 40px;
+.dmca-step {
     display: flex;
-    gap: 30px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-    transition: transform 0.3s ease, border-color 0.3s ease;
+    gap: 24px;
 }
 
-.step-card:hover {
-    transform: translateY(-5px);
-    border-color: rgba(56, 189, 248, 0.3);
+.dmca-step-aside {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-shrink: 0;
+    padding-top: 4px;
 }
 
-.step-number {
-    width: 48px;
-    height: 48px;
-    background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
+.dmca-step-num {
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
+    background: linear-gradient(135deg, #38bdf8, #0284c7);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.5rem;
+    font-size: 1rem;
     font-weight: 800;
     color: white;
     flex-shrink: 0;
-    box-shadow: 0 4px 15px rgba(2, 132, 199, 0.4);
+    box-shadow: 0 0 20px rgba(56, 189, 248, 0.3);
+    position: relative;
+    z-index: 1;
 }
 
-.step-content {
+.dmca-step-line {
+    width: 2px;
+    flex: 1;
+    min-height: 40px;
+    background: linear-gradient(to bottom, rgba(56,189,248,0.4), rgba(56,189,248,0.05));
+    margin: 8px 0;
+}
+
+.dmca-step-body {
     flex: 1;
     min-width: 0;
+    padding-bottom: 48px;
 }
 
-.step-content h2 {
-    font-size: 1.5rem;
+.dmca-step-body h2 {
+    font-size: 1.35rem;
     font-weight: 700;
     color: white;
-    margin: 0 0 12px 0;
+    margin: 4px 0 10px;
 }
 
-.step-content p {
-    color: var(--foreground-muted);
-    font-size: 1.05rem;
-    line-height: 1.6;
-    margin: 0 0 20px 0;
+.dmca-step-body p {
+    color: rgba(255,255,255,0.6);
+    font-size: 1rem;
+    line-height: 1.7;
+    margin: 0 0 20px;
 }
 
-.discord-btn {
+.dmca-step-body p strong {
+    color: #38bdf8;
+    font-weight: 600;
+}
+
+.dmca-discord-btn {
     display: inline-flex;
     align-items: center;
     gap: 8px;
     background: #5865F2;
     color: white;
-    padding: 12px 24px;
+    padding: 11px 22px;
     border-radius: 12px;
     text-decoration: none;
     font-weight: 600;
+    font-size: 0.95rem;
     transition: all 0.2s ease;
+    margin-bottom: 24px;
 }
 
-.discord-btn:hover {
+.dmca-discord-btn:hover {
     background: #4752C4;
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(88, 101, 242, 0.4);
+    box-shadow: 0 8px 24px rgba(88, 101, 242, 0.45);
 }
 
-.gif-container {
-    width: 100%;
-    max-width: 600px;
-    border-radius: 12px;
+.dmca-gif-wrap {
+    border-radius: 14px;
     overflow: hidden;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
-    margin-top: 24px;
-    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+    background: rgba(0,0,0,0.3);
+    max-width: 560px;
 }
 
-.guide-gif {
+.dmca-gif-wrap img {
     width: 100%;
     height: auto;
     display: block;
 }
 
-.info-list {
-    list-style-type: disc;
-    padding-left: 20px;
-    color: var(--foreground-subtle);
-    margin-bottom: 24px;
+.dmca-checklist {
+    list-style: none;
+    padding: 0;
+    margin: 0;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 10px;
 }
 
-.info-list li {
+.dmca-checklist li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    color: rgba(255,255,255,0.65);
+    font-size: 0.95rem;
     line-height: 1.5;
 }
 
-.icon-box {
-    width: 48px;
-    height: 48px;
-    background: rgba(56, 189, 248, 0.1);
-    border: 1px solid rgba(56, 189, 248, 0.2);
-    border-radius: 12px;
+.dmca-checklist li svg {
+    color: #4ade80;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.dmca-note {
     display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #38bdf8;
+    align-items: flex-start;
+    gap: 12px;
+    background: rgba(239, 68, 68, 0.07);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    border-radius: 14px;
+    padding: 16px 20px;
+    color: rgba(255,255,255,0.6);
+    font-size: 0.9rem;
+    line-height: 1.6;
+    margin-top: 8px;
 }
 
-.mt-4 {
-    margin-top: 24px;
+.dmca-note svg {
+    color: #fbbf24;
+    flex-shrink: 0;
+    margin-top: 2px;
 }
 
-@media (max-width: 768px) {
-    .step-card {
-        flex-direction: column;
-        padding: 30px 20px;
-        gap: 20px;
-    }
-
-    .dmca-title {
-        font-size: 2rem;
-    }
+body.light-mode .dmca-title {
+    background: linear-gradient(135deg, #0f172a 0%, #475569 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
 }
 
-body.light-mode .dmca-bg-blur {
-    background: linear-gradient(135deg, rgba(241, 245, 249, 0.6) 0%, rgba(226, 232, 240, 0.8) 100%);
+body.light-mode .dmca-subtitle { color: #64748b; }
+body.light-mode .dmca-back { color: #64748b; }
+body.light-mode .dmca-back:hover { color: #0f172a; }
+body.light-mode .dmca-step-body h2 { color: #0f172a; }
+body.light-mode .dmca-step-body p { color: #475569; }
+body.light-mode .dmca-checklist li { color: #475569; }
+body.light-mode .dmca-note { background: rgba(239,68,68,0.05); color: #64748b; }
+
+@media (max-width: 640px) {
+    .dmca-inner { padding-top: 90px; }
+    .dmca-step-body h2 { font-size: 1.15rem; }
+    .dmca-step-body { padding-bottom: 36px; }
 }
 
-body.light-mode .dmca-title,
-body.light-mode .step-content h2 {
-    color: #0f172a;
-}
-
-body.light-mode .step-card {
-    background: rgba(255, 255, 255, 0.7);
-    border-color: rgba(148, 163, 184, 0.2);
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.05);
-}
-
-body.light-mode .step-card:hover {
-    border-color: rgba(56, 189, 248, 0.4);
-}
-
-body.light-mode .back-btn {
-    color: #0f172a !important;
-}

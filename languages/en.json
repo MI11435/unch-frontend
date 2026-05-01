@@ -5,12 +5,19 @@
     "dashboard": "Dashboard",
     "login": "Login",
     "logout": "Logout",
-    "profile": "Profile"
+    "profile": "Profile",
+    "search": "search"
   },
   "userProfile": {
     "back": "Back",
     "charts": "Popular Charts",
     "noCharts": "This user hasn't made any charts yet :<",
+    "loading": "Loading profile...",
+    "notFound": "User Not Found",
+    "doesNotExist": "This user profile doesn't exist.",
+    "backHome": "Back to Home",
+    "editProfile": "Edit Profile",
+    "viewAllCharts": "View All Charts",
     "stats": "Statistics",
     "totalCharts": "Charts",
     "charts_singular": "{1} Chart",
@@ -52,7 +59,7 @@
     "chartedBy": "Charted by"
   },
   "search": {
-    "title": "Levels",
+    "title": "search",
     "searchType": "Search Type",
     "random": "Random",
     "quick": "Quick",
@@ -189,7 +196,12 @@
     "unknownArtist": "Unknown Artist",
     "unknown": "Unknown",
     "next": "Next",
-    "prev": "Previous"
+    "prev": "Previous",
+    "loadMore": "Load More",
+    "more": "more",
+    "total": "total",
+    "readMore": "Read More",
+    "readLess": "Read Less"
   },
   "card": {
     "level": "Lv. {1}"

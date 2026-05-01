@@ -53,6 +53,22 @@
     will-change: filter;
 }
 
+.chartlist-ambience {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    filter: blur(32px) saturate(1.6) brightness(0.3);
+    opacity: 0.6;
+    z-index: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.songlist .dashboard-li:hover .chartlist-ambience {
+    opacity: 0.85;
+}
+
 .songlist .dashboard-li:hover .dashboard-bg-layer {
     filter: brightness(0.55);
     
@@ -84,18 +100,45 @@
 }
 
 .audio-section {
-    flex-shrink: 0;
-    margin-left: auto;
-
-    width: 100%;
-
+    flex: 1;
+    min-width: 0;
     display: flex;
-    justify-content: flex-end;
+    flex-direction: column;
+    justify-content: center;
+    align-items: stretch;
+    gap: 4px;
+    padding-right: 12px;
 }
 
-.audio-controls {
-    width: 100%;
+.chartlist-play-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(56, 189, 248, 0.12);
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    color: #38bdf8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
 
+.chartlist-play-btn:hover {
+    background: rgba(56, 189, 248, 0.25);
+    border-color: rgba(56, 189, 248, 0.6);
+}
+
+.chartlist-play-btn.active {
+    background: linear-gradient(135deg, rgba(56, 189, 248, 0.3), rgba(129, 140, 248, 0.3));
+    border-color: rgba(56, 189, 248, 0.6);
+    color: white;
+}
+
+.no-audio-label {
+    font-size: 0.72rem;
+    color: rgba(255, 255, 255, 0.25);
 }
 
 .audio-section canvas {
@@ -517,8 +560,11 @@ body.light-mode .stats-combined {
 
     .audio-section {
         width: 100% !important;
+        min-width: unset !important;
+        padding-right: 0 !important;
         margin-top: 4px;
-
+        flex-direction: row;
+        justify-content: flex-start;
     }
 
     .metadata-section {

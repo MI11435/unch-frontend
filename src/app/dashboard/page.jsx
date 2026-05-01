@@ -1,6 +1,7 @@
 "use client";
 import "./page.css";
 import { useState, useEffect, useRef, useCallback, Suspense } from "react";
+import { createPortal } from "react-dom";
 import {
   Heart,
   MessageSquare,
@@ -109,6 +110,7 @@ function DashboardContent() {
 
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(0);
   const [pageCount, setPageCount] = useState(0);
@@ -134,6 +136,7 @@ function DashboardContent() {
   const [deletablePost, setDeletablePost] = useState(null);
   const [limits, setLimits] = useState(null);
   const [activeMenu, setActiveMenu] = useState(null);
+  const [menuAnchor, setMenuAnchor] = useState(null);
   const [mounted, setMounted] = useState(false);
 
   const [scheduleMenuPostId, setScheduleMenuPostId] = useState(null);
@@ -141,6 +144,13 @@ function DashboardContent() {
   const scheduleAnchorRef = useRef(null);
 
   useEffect(() => setMounted(true), []);
+
+  useEffect(() => {
+    if (!activeMenu) return;
+    const close = () => setActiveMenu(null);
+    document.addEventListener('click', close);
+    return () => document.removeEventListener('click', close);
+  }, [activeMenu]);
 
 
   const dtLocalToEpochSeconds = (value) => {
@@ -490,7 +500,7 @@ function DashboardContent() {
   };
 
   const handleEdit = async () => {
-    setLoading(true);
+    setSubmitting(true);
     try {
       const vis = form.visibility && typeof form.visibility === "string" ? form.visibility.toUpperCase() : "PUBLIC";
       const chartData = {
@@ -556,12 +566,12 @@ function DashboardContent() {
       setIsOpen(false);
       fetchCharts();
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
   const handleUpload = async () => {
-    setLoading(true);
+    setSubmitting(true);
     try {
       const vis = form.visibility && typeof form.visibility === "string" ? form.visibility.toUpperCase() : "PUBLIC";
       const chartData = {
@@ -569,6 +579,7 @@ function DashboardContent() {
         title: form.title,
         artists: form.artists,
         author: form.author,
+        description: form.description || "",
         includes_background: !!form.background,
         includes_preview: !!form.preview,
         status: vis,
@@ -939,6 +950,7 @@ function DashboardContent() {
 
                     return (
                       <div key={post.id} className="chart-card-redesigned">
+                        <div className="card-inner chart-card-inner">
                         <div className="card-bg" style={{ backgroundImage: `url(${post.coverUrl || "/placeholder.png"})` }} />
 
                         <div className="card-thumb cursor-pointer" onClick={() => router.push(`/levels/UnCh-${post.id}`)}>
@@ -949,55 +961,70 @@ function DashboardContent() {
                               <span className="no-img-text">No Image</span>
                             </div>
                           )}
+                          <span className="card-lv-badge">Lv. {parseFloat(Number(post.rating || 0).toFixed(2))}</span>
                         </div>
 
                         <div className="card-info">
                           <div className="info-header">
-                            <div className="flex items-center justify-start gap-2 min-w-0">
-                              <h3 title={post.title} className="truncate"><FormattedText text={post.title} /></h3>
-                              <span title="Rating" className="rating-badge text-xs" style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                                Lv. {post.rating}
-                              </span>
-                            </div>
+                            <h3 title={post.title} className="truncate"><FormattedText text={post.title} /></h3>
 
                             <div className="action-menu-wrapper">
                               <button
                                 className="icon-btn-ghost"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setActiveMenu(activeMenu === post.id ? null : post.id);
+                                  if (activeMenu === post.id) {
+                                    setActiveMenu(null);
+                                  } else {
+                                    const rect = e.currentTarget.getBoundingClientRect();
+                                    const dropWidth = 170;
+                                    let left = rect.right - dropWidth;
+                                    if (left < 8) left = 8;
+                                    if (left + dropWidth > window.innerWidth - 8) left = window.innerWidth - dropWidth - 8;
+                                    const top = rect.bottom + 4;
+                                    setMenuAnchor({ top, left });
+                                    setActiveMenu(post.id);
+                                  }
                                 }}
                               >
                                 <MoreVertical size={16} />
                               </button>
 
-                              <div
-                                className={`action-dropdown ${activeMenu === post.id ? "active" : ""}`}
-                                style={{ display: activeMenu === post.id ? "flex" : "none", minWidth: "max-content", right: 0 }}
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                {(post.status === "PUBLIC" || post.status === "UNLISTED") && (
-                                  <button onClick={() => router.push(`/levels/UnCh-${post.id}`)}>
-                                    <Eye size={14} style={{ marginRight: "8px" }} /> {t("dashboard.view", "View")}
-                                  </button>
-                                )}
-                                {sonolusUser && sonolusUser.sonolus_id === post.authorId && (
-                                  <>
-                                    <button onClick={() => openEdit(post)}>
-                                      <Pencil size={14} style={{ marginRight: "8px" }} /> {t("dashboard.edit", "Edit")}
+                              {activeMenu === post.id && mounted && createPortal(
+                                <div
+                                  className="action-dropdown"
+                                  style={{
+                                    position: "fixed",
+                                    top: menuAnchor?.top,
+                                    left: menuAnchor?.left,
+                                    zIndex: 2147483647,
+                                  }}
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  {(post.status === "PUBLIC" || post.status === "UNLISTED") && (
+                                    <button onClick={() => router.push(`/levels/UnCh-${post.id}`)}>
+                                      <Eye size={14} style={{ marginRight: "8px" }} /> {t("dashboard.view", "View")}
                                     </button>
-                                    <button onClick={() => {
-                                      setActiveMenu(null);
-                                      openScheduleMenu(post);
-                                    }}>
-                                      <Clock size={14} style={{ marginRight: "8px" }} /> {t("dashboard.schedule", "Schedule")}
-                                    </button>
-                                    <button className="text-red" onClick={() => handleDelete(post)}>
-                                      <Trash2 size={14} style={{ marginRight: "8px" }} /> {t("dashboard.delete", "Delete")}
-                                    </button>
-                                  </>
-                                )}
-                              </div>
+                                  )}
+                                  {sonolusUser && sonolusUser.sonolus_id === post.authorId && (
+                                    <>
+                                      <button onClick={() => openEdit(post)}>
+                                        <Pencil size={14} style={{ marginRight: "8px" }} /> {t("dashboard.edit", "Edit")}
+                                      </button>
+                                      <button onClick={() => {
+                                        setActiveMenu(null);
+                                        openScheduleMenu(post);
+                                      }}>
+                                        <Clock size={14} style={{ marginRight: "8px" }} /> {t("dashboard.schedule", "Schedule")}
+                                      </button>
+                                      <button className="text-red" onClick={() => handleDelete(post)}>
+                                        <Trash2 size={14} style={{ marginRight: "8px" }} /> {t("dashboard.delete", "Delete")}
+                                      </button>
+                                    </>
+                                  )}
+                                </div>,
+                                document.body
+                              )}
                             </div>
                           </div>
 
@@ -1137,6 +1164,7 @@ function DashboardContent() {
                             </div>
                           </div>
                         </div>
+                        </div>
                       </div>
                     );
                   })}
@@ -1181,6 +1209,7 @@ function DashboardContent() {
           limits={limits}
           isDark={true}
         />
+
       </div>
     </div >
   );

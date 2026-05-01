@@ -13,10 +13,6 @@ export default function ViewAllDrawer({
     initialCharts,
     fetchType,
     apiBase,
-    audioRefs,
-    currentlyPlaying,
-    onPlay,
-    onStop
 }) {
     const { t } = useLanguage();
     const drawerRef = useRef(null);
@@ -115,11 +111,15 @@ export default function ViewAllDrawer({
                     title: item.title,
                     artists: item.artists || "Unknown Artist",
                     author: item.author_full || item.author || "Unknown",
+                    authorId: item.author || "",
+                    authorHandle: item.author_handle || item.author || "",
+                    assetBaseUrl: base,
                     coverUrl: (base && item.jacket_file_hash && authorHash) ? `${base}/${authorHash}/${item.id}/${item.jacket_file_hash}` : (item.coverUrl || item.thumbnail?.url),
                     bgmUrl: (base && item.music_file_hash && authorHash) ? `${base}/${authorHash}/${item.id}/${item.music_file_hash}` : (item.bgmUrl || item.bgm?.url),
                     rating: item.rating ?? 0,
                     likeCount: item.like_count ?? item.likes ?? 0,
-                    commentsCount: item.comment_count ?? item.comments_count ?? item.comments ?? 0
+                    commentsCount: item.comment_count ?? item.comments_count ?? item.comments ?? 0,
+                    createdAt: item.created_at || item.createdAt,
                 };
             });
 
@@ -199,15 +199,7 @@ export default function ViewAllDrawer({
                                 key={`${chart.id}-${index}`}
                                 chart={chart}
                                 index={index}
-                                showPlayButton={true}
-                                onPlay={onPlay}
-                                onStop={onStop}
-                                isPlaying={currentlyPlaying === chart.id}
-                                audioRef={(ref) => {
-                                    if (audioRefs && audioRefs.current && ref) {
-                                        audioRefs.current[chart.id] = ref;
-                                    }
-                                }}
+                                totalCards={filteredCharts.length}
                             />
                         ))}
                         {filteredCharts.length === 0 && (

@@ -1,25 +1,79 @@
 "use client";
 import { memo, useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { Pencil, Trash2, Globe, Lock, Link as LinkIcon, Heart, Calendar, RefreshCw, Loader2, MessageSquare, MoreVertical, Ban, UserX } from "lucide-react";
 import AudioControls from "../audio-control/AudioControls";
 import AudioVisualizer from "../audio-visualizer/AudioVisualizer";
 import LoadingImage from "../loading-image/LoadingImage";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useAudioPlayer } from "@/contexts/AudioPlayerContext";
 import "./ChartsList.css";
 import { formatRelativeTime } from "@/utils/dateUtils";
+
+function AuthorPopout({ authorId, anchorRect }) {
+  const [data, setData] = useState(null);
+
+  useEffect(() => {
+    if (!authorId) return;
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/accounts/${authorId}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(res => { if (res?.account) setData({ ...res.account, _base: res.asset_base_url || '' }); })
+      .catch(() => {});
+  }, [authorId]);
+
+  if (!anchorRect) return null;
+
+  const base = data?._base || '';
+  const uid = data?.sonolus_id || authorId;
+  const profileUrl = (data?.profile_hash && base && uid) ? `${base}/${uid}/profile/${data.profile_hash}_webp` : '/defpfp.webp';
+  const bannerUrl = (data?.banner_hash && base && uid) ? `${base}/${uid}/banner/${data.banner_hash}_webp` : '/def.webp';
+
+  return createPortal(
+    <div style={{
+      position: 'fixed',
+      bottom: `${window.innerHeight - anchorRect.top + 8}px`,
+      left: `${anchorRect.left}px`,
+      width: '200px',
+      background: 'rgba(8,12,24,0.96)',
+      border: '1px solid rgba(56,189,248,0.25)',
+      borderRadius: '14px',
+      overflow: 'hidden',
+      zIndex: 9999,
+      boxShadow: '0 8px 32px rgba(0,0,0,0.7)',
+      pointerEvents: 'none',
+      animation: 'popout-in 0.2s cubic-bezier(0.4,0,0.2,1) forwards',
+    }}>
+      <style>{`@keyframes popout-in{from{opacity:0;transform:scale(0.94) translateY(4px)}to{opacity:1;transform:scale(1) translateY(0)}}`}</style>
+      <div style={{
+        width: '100%', height: '70px',
+        backgroundImage: `url(${bannerUrl})`,
+        backgroundSize: 'cover', backgroundPosition: 'center',
+        backgroundColor: 'rgba(56,189,248,0.08)', position: 'relative',
+      }}>
+        <div style={{
+          position: 'absolute', inset: 0,
+          display: 'flex', alignItems: 'center', gap: '8px', padding: '0 12px',
+          background: 'linear-gradient(to right,rgba(8,12,24,0.7) 0%,rgba(8,12,24,0.3) 100%)',
+        }}>
+          <img src={profileUrl} alt="" style={{ width: 32, height: 32, borderRadius: '50%', border: '2px solid rgba(56,189,248,0.5)', objectFit: 'cover', flexShrink: 0 }}
+            onError={(e) => { e.target.src = '/defpfp.webp'; }} />
+          <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textShadow: '0 1px 4px rgba(0,0,0,0.8)' }}>
+            {data?.sonolus_username || data?.sonolus_id || authorId}
+          </span>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
 
 export default function ChartsList({
   posts,
   loading,
-  currentlyPlaying,
-  audioRefs,
-  onPlay,
-  onStop,
-  onAudioRef,
-  onEdit,
   sonolusUser,
   onVisibilityChange,
+  onEdit,
   onDelete
 }) {
   const { t } = useLanguage();
@@ -40,13 +94,8 @@ export default function ChartsList({
           post={post}
           sonolusUser={sonolusUser}
           onVisibilityChange={onVisibilityChange}
-          onPlay={onPlay}
-          onStop={onStop}
-          onAudioRef={onAudioRef}
           onEdit={onEdit}
           onDelete={onDelete}
-          currentlyPlaying={currentlyPlaying}
-          audioRefs={audioRefs}
           t={t}
         />
       ))}
@@ -58,15 +107,30 @@ const MemoizedChartItem = memo(function ChartItem({
   post,
   sonolusUser,
   onVisibilityChange,
-  onPlay,
-  onStop,
-  onAudioRef,
   onEdit,
   onDelete,
-  currentlyPlaying,
-  audioRefs,
   t
 }) {
+  const { audioRef, trackId, isPlaying, isBuffering, currentTime, duration, play, pause } = useAudioPlayer();
+  const isThisPlaying = trackId === post.id && isPlaying;
+  const isThisBuffering = trackId === post.id && isBuffering;
+  const isThisActive = trackId === post.id && (isPlaying || isBuffering);
+
+  const handlePlay = () => {
+    if (!post.bgmUrl) return;
+    const proxied = post.bgmUrl.startsWith("http")
+      ? `/api/audio-proxy?url=${encodeURIComponent(post.bgmUrl)}`
+      : post.bgmUrl;
+    play(post.id, proxied, {
+      title: post.title,
+      thumbnail: post.coverUrl,
+      href: `/levels/UnCh-${encodeURIComponent(post.id)}`,
+    });
+  };
+
+  const handleStop = () => {
+    if (trackId === post.id) pause();
+  };
   const canSeeVisibilityChange = onVisibilityChange &&
     ((sonolusUser && sonolusUser.sonolus_id === post.authorId && post.status) ||
       (sonolusUser && (sonolusUser.mod === true || sonolusUser.isMod === true)));
@@ -79,6 +143,22 @@ const MemoizedChartItem = memo(function ChartItem({
 
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef(null);
+  const [showAuthorPopout, setShowAuthorPopout] = useState(false);
+  const [authorAnchorRect, setAuthorAnchorRect] = useState(null);
+  const authorAnchorRef = useRef(null);
+  const authorTimerRef = useRef(null);
+
+  const handleAuthorEnter = () => {
+    clearTimeout(authorTimerRef.current);
+    authorTimerRef.current = setTimeout(() => {
+      if (authorAnchorRef.current) setAuthorAnchorRect(authorAnchorRef.current.getBoundingClientRect());
+      setShowAuthorPopout(true);
+    }, 100);
+  };
+  const handleAuthorLeave = () => {
+    clearTimeout(authorTimerRef.current);
+    setShowAuthorPopout(false);
+  };
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -125,6 +205,12 @@ const MemoizedChartItem = memo(function ChartItem({
 
   return (
     <li className="dashboard-li">
+      {(post.coverUrl || post.backgroundUrl) && (
+        <div
+          className="chartlist-ambience"
+          style={{ backgroundImage: `url(${post.coverUrl || post.backgroundUrl})` }}
+        />
+      )}
       <div
         className="dashboard-bg-layer"
         style={{
@@ -160,7 +246,20 @@ const MemoizedChartItem = memo(function ChartItem({
                     : post.title}
                 </span>
                 <span className="author-dashboard" style={{ fontSize: '10px', color: '#94a3b8', marginTop: '4px', display: 'block' }}>
-                  {t('hero.chartedBy')} {post.author}
+                  {t('hero.chartedBy')}{' '}
+                  <span
+                    ref={authorAnchorRef}
+                    onMouseEnter={handleAuthorEnter}
+                    onMouseLeave={handleAuthorLeave}
+                    style={{ display: 'inline-block', position: 'relative' }}
+                  >
+                    <span
+                      style={{ color: '#38bdf8', textDecoration: 'none', cursor: 'pointer' }}
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.location.href = `/user/${post.authorHandle || post.authorId}`; }}
+                    >
+                      {post.author}
+                    </span>
+                  </span>
                 </span>
               </Link>
               <div className="meta-stack-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px', minWidth: '120px' }}>
@@ -174,17 +273,23 @@ const MemoizedChartItem = memo(function ChartItem({
 
             <div className="audio-section">
               <AudioControls
-                bgmUrl={post.bgmUrl}
-                onPlay={() => onPlay(post.id)}
-                onStop={() => onStop(post.id)}
-                isPlaying={currentlyPlaying === post.id}
-                isActive={currentlyPlaying === post.id}
-                audioRef={(ref) => onAudioRef(post.id, ref)}
+                bgmUrl={post.bgmUrl
+                  ? (post.bgmUrl.startsWith("http")
+                    ? `/api/audio-proxy?url=${encodeURIComponent(post.bgmUrl)}`
+                    : post.bgmUrl)
+                  : null}
+                onPlay={handlePlay}
+                onStop={handleStop}
+                isPlaying={isThisPlaying}
+                isActive={isThisActive}
+                audioRef={() => {}}
+                currentTime={isThisActive ? currentTime : undefined}
+                duration={isThisActive ? duration : undefined}
               />
-              {currentlyPlaying === post.id && (
+              {isThisActive && (
                 <AudioVisualizer
-                  audioRef={audioRefs.current ? audioRefs.current[post.id] : null}
-                  isPlaying={currentlyPlaying === post.id}
+                  audioRef={audioRef}
+                  isPlaying={isThisPlaying}
                 />
               )}
             </div>
@@ -192,7 +297,7 @@ const MemoizedChartItem = memo(function ChartItem({
 
           <div className="metadata-section">
             <div className="chart-actions">
-              {(canEditChart || canDeleteChart || isAdmin || isMod) && (
+              {(canEditChart || canDeleteChart) && (
                 <div className="menu-container" style={{ position: 'relative' }} ref={menuRef}>
                   <button
                     onClick={(e) => {
@@ -265,7 +370,17 @@ const MemoizedChartItem = memo(function ChartItem({
                 </span>
               </div>
               {post.createdAt && (
-                <span className="metadata-item created">
+                <span
+                  className="metadata-item created"
+                  title={(() => {
+                    const d = new Date(post.createdAt);
+                    const offset = -d.getTimezoneOffset();
+                    const sign = offset >= 0 ? '+' : '-';
+                    const h = String(Math.floor(Math.abs(offset) / 60)).padStart(2, '0');
+                    const m = String(Math.abs(offset) % 60).padStart(2, '0');
+                    return `${d.toLocaleDateString()} ${d.toLocaleTimeString()} UTC${sign}${h}:${m}`;
+                  })()}
+                >
                   <Calendar size={12} /> {formatRelativeTime(post.createdAt, t)}
                 </span>
               )}

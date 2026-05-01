@@ -59,9 +59,10 @@ const ModalTextarea = ({ id, label, value, onChange, maxLength, placeholder }) =
       id={id}
       value={value}
       onChange={onChange}
-      rows="4"
+      rows="12"
       maxLength={maxLength}
       placeholder={placeholder}
+      style={{ minHeight: '220px', resize: 'vertical' }}
     />
   </div>
 );

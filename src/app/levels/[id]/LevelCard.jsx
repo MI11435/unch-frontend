@@ -2,6 +2,7 @@
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Heart, MessageSquare, Share2, Copy, ExternalLink, ArrowLeft, User, Music, Play, Pause, Volume2, Star, Download, Eye, EyeOff, ChevronLeft, ChevronRight, Calendar, MoreVertical, Lock, Trash2, Ban, ShieldCheck, UserX, X, Trophy, Info, ChevronDown } from 'lucide-react';
 import WaveformPlayer from '../../../components/waveform-player/WaveformPlayer';
 import FormattedText from '../../../components/formatted-text/FormattedText';
@@ -10,9 +11,67 @@ import LiquidSelect from '../../../components/liquid-select/LiquidSelect';
 import MarqueeText from '../../../components/marquee-text/MarqueeText';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { useUser } from '../../../contexts/UserContext';
+import { useAudioPlayer } from '../../../contexts/AudioPlayerContext';
 import "./LevelCard.css";
 
 const DEFAULT_PFP = "/defpfp.webp";
+
+function AuthorPopout({ authorId, anchorRect }) {
+  const [data, setData] = useState(null);
+
+  useEffect(() => {
+    if (!authorId) return;
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/accounts/${authorId}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(res => { if (res?.account) setData({ ...res.account, _base: res.asset_base_url || '' }); })
+      .catch(() => {});
+  }, [authorId]);
+
+  const base = data?._base || '';
+  const uid = data?.sonolus_id || authorId;
+  const profileUrl = (data?.profile_hash && base && uid) ? `${base}/${uid}/profile/${data.profile_hash}_webp` : DEFAULT_PFP;
+  const bannerUrl = (data?.banner_hash && base && uid) ? `${base}/${uid}/banner/${data.banner_hash}_webp` : '/def.webp';
+
+  if (!anchorRect) return null;
+
+  return createPortal(
+    <div style={{
+      position: 'fixed',
+      bottom: `${window.innerHeight - anchorRect.top + 8}px`,
+      left: `${anchorRect.left}px`,
+      width: '200px',
+      background: 'rgba(8,12,24,0.96)',
+      border: '1px solid rgba(56,189,248,0.25)',
+      borderRadius: '14px',
+      overflow: 'hidden',
+      zIndex: 9999,
+      boxShadow: '0 8px 32px rgba(0,0,0,0.7)',
+      pointerEvents: 'none',
+      animation: 'popout-in 0.2s cubic-bezier(0.4,0,0.2,1) forwards',
+    }}>
+      <style>{`@keyframes popout-in { from { opacity:0; transform:scale(0.94) translateY(4px); } to { opacity:1; transform:scale(1) translateY(0); } }`}</style>
+      <div style={{
+        width: '100%', height: '70px',
+        backgroundImage: `url(${bannerUrl})`,
+        backgroundSize: 'cover', backgroundPosition: 'center',
+        backgroundColor: 'rgba(56,189,248,0.08)', position: 'relative',
+      }}>
+        <div style={{
+          position: 'absolute', inset: 0,
+          display: 'flex', alignItems: 'center', gap: '8px', padding: '0 12px',
+          background: 'linear-gradient(to right, rgba(8,12,24,0.7) 0%, rgba(8,12,24,0.3) 100%)',
+        }}>
+          <img src={profileUrl} alt="" style={{ width: 32, height: 32, borderRadius: '50%', border: '2px solid rgba(56,189,248,0.5)', objectFit: 'cover', flexShrink: 0 }}
+            onError={(e) => { e.target.src = DEFAULT_PFP; }} />
+          <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textShadow: '0 1px 4px rgba(0,0,0,0.8)' }}>
+            {data?.sonolus_username || data?.sonolus_id || authorId}
+          </span>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
 
 
 const StatWithGraph = ({ icon: Icon, label, value, color, data }) => {
@@ -77,20 +136,40 @@ export default function LevelCard({ initialLevel, id, SONOLUS_SERVER_URL }) {
   const { sonolusUser, session } = useUser();
   const sonolusServerUrl = SONOLUS_SERVER_URL;
 
-  const [level, setLevel] = useState(initialLevel);
+  const [levelData, setLevel] = useState(initialLevel);
   const [loading, setLoading] = useState(!initialLevel);
   const [error, setError] = useState(null);
 
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [volume, setVolume] = useState(1);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [waveformBars, setWaveformBars] = useState([]);
-  const audioRef = useRef(null);
-  const playPromiseRef = useRef(null);
-  const [isBuffering, setIsBuffering] = useState(false);
-  const [showMenu, setShowMenu] = useState(false);
-  const [audioMountKey] = useState(() => Math.random().toString(36).substring(7));
+  const {
+    audioRef,
+    trackId,
+    trackMeta,
+    isPlaying,
+    isBuffering,
+    currentTime,
+    duration,
+    volume,
+    setVolume,
+    loadTrack,
+    play: ctxPlay,
+    togglePlay: ctxTogglePlay,
+    seek,
+  } = useAudioPlayer();  const [showMenu, setShowMenu] = useState(false);
+  const [showAuthorPopout, setShowAuthorPopout] = useState(false);
+  const [authorAnchorRect, setAuthorAnchorRect] = useState(null);
+  const authorLinkRef = useRef(null);
+  const authorTimerRef = useRef(null);
+
+  const handleAuthorEnter = () => {
+    authorTimerRef.current = setTimeout(() => {
+      if (authorLinkRef.current) setAuthorAnchorRect(authorLinkRef.current.getBoundingClientRect());
+      setShowAuthorPopout(true);
+    }, 250);
+  };
+  const handleAuthorLeave = () => {
+    clearTimeout(authorTimerRef.current);
+    setShowAuthorPopout(false);
+  };
 
 
   const [leaderboard, setLeaderboard] = useState([]);
@@ -111,7 +190,7 @@ export default function LevelCard({ initialLevel, id, SONOLUS_SERVER_URL }) {
         body: JSON.stringify({ status: newStatus })
       });
       if (res.ok) {
-        setLevel({ ...level, status: newStatus });
+        setLevel({ ...levelData, status: newStatus });
         setShowMenu(false);
       }
     } catch (e) {
@@ -123,7 +202,7 @@ export default function LevelCard({ initialLevel, id, SONOLUS_SERVER_URL }) {
   const toggleStaffPick = async () => {
     try {
       const cleanId = id.replace(/^UnCh-/, '');
-      const newVal = !level.staffPick;
+      const newVal = !levelData.staffPick;
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/charts/${cleanId}/stpick/`, {
         method: 'PATCH',
         headers: {
@@ -133,7 +212,7 @@ export default function LevelCard({ initialLevel, id, SONOLUS_SERVER_URL }) {
         body: JSON.stringify({ value: newVal })
       });
       if (res.ok) {
-        setLevel({ ...level, staffPick: newVal });
+        setLevel({ ...levelData, staffPick: newVal });
         setShowMenu(false);
       } else {
         alert('Failed to toggle staff pick');
@@ -231,7 +310,7 @@ export default function LevelCard({ initialLevel, id, SONOLUS_SERVER_URL }) {
 
 
   useEffect(() => {
-    if (!level && id) {
+    if (!levelData && id) {
       const fetchLevelClient = async () => {
         try {
           const headers = {};
@@ -296,7 +375,7 @@ export default function LevelCard({ initialLevel, id, SONOLUS_SERVER_URL }) {
 
       fetchLevelClient();
     }
-  }, [id, level, session]);
+  }, [id, levelData, session]);
 
   const handleDeleteComment = async (commentId) => {
     try {
@@ -319,8 +398,31 @@ export default function LevelCard({ initialLevel, id, SONOLUS_SERVER_URL }) {
 
 
 
-  if (loading) return (<div className="level-loading"><div className="loading-spinner"></div></div>);
-  if (error || !level) return (
+  // use the cached meta so the player doesn't disappear on navigation back.
+  const effectiveLevel = levelData || (trackId === id && trackMeta ? {
+    title: trackMeta.title,
+    thumbnail: trackMeta.thumbnail,
+    description: null,
+    artists: null,
+    author: null,
+    authorHandle: null,
+    authorId: null,
+    rating: null,
+    createdAt: null,
+    likes: 0,
+    comments: 0,
+    status: null,
+    staffPick: false,
+    asset_base_url: null,
+    music_hash: null,
+    backgroundUrl: null,
+    backgroundV3Url: null,
+    sonolusId: id,
+    id: null,
+  } : null);
+
+  if (loading && !effectiveLevel) return (<div className="level-loading"><div className="loading-spinner"></div></div>);
+  if (error || !effectiveLevel) return (
     <div className="level-error-container" style={{ padding: '40px', textAlign: 'center', color: 'white' }}>
       <h1>{t('common.error', 'Error')}</h1>
       <p>{t('errors.levelNotFound', 'Level not found or you do not have permission to view it.')}</p>
@@ -330,17 +432,19 @@ export default function LevelCard({ initialLevel, id, SONOLUS_SERVER_URL }) {
     </div>
   );
 
+  const level = effectiveLevel;
+
   const getSonolusLink = () => {
     if (!SONOLUS_SERVER_URL) return '';
     const serverWithoutSchema = SONOLUS_SERVER_URL.replace(/^https?:\/\//, '');
-    const sonolusId = level.sonolusId || `UnCh-${level.id}`;
+    const sonolusId = levelData.sonolusId || `UnCh-${levelData.id}`;
     return `https://open.sonolus.com/${serverWithoutSchema}/levels/${sonolusId}`;
   };
 
   const handleCopyEmbed = async () => {
     const origin = typeof window !== 'undefined' ? window.location.origin : (process.env.NEXT_PUBLIC_APP_URL || '');
-    const embedUrl = `${origin}/embed/${level.sonolusId || 'UnCh-' + level.id}`;
-    const embedCode = `<iframe src="${embedUrl}" width="450" height="240" style="border:none;border-radius:16px;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,0.4);" title="${level.title} - UntitledCharts" loading="lazy"></iframe>`;
+    const embedUrl = `${origin}/embed/${levelData.sonolusId || 'UnCh-' + levelData.id}`;
+    const embedCode = `<iframe src="${embedUrl}" width="450" height="240" style="border:none;border-radius:16px;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,0.4);" title="${levelData.title} - UntitledCharts" loading="lazy"></iframe>`;
     try {
       await navigator.clipboard.writeText(embedCode);
       alert(t('levelDetail.embedCopied'));
@@ -352,8 +456,8 @@ export default function LevelCard({ initialLevel, id, SONOLUS_SERVER_URL }) {
   const handleShare = () => {
     if (navigator.share) {
       navigator.share({
-        title: level.title,
-        text: `Check out ${level.title} on UntitledCharts!`,
+        title: levelData.title,
+        text: `Check out ${levelData.title} on UntitledCharts!`,
         url: window.location.href
       }).catch(console.error);
     } else {
@@ -396,87 +500,51 @@ export default function LevelCard({ initialLevel, id, SONOLUS_SERVER_URL }) {
     document.body.removeChild(textArea);
   };
 
-  const togglePlay = () => {
-    if (!audioRef.current) return;
-    if (isPlaying || isBuffering) {
-      if (playPromiseRef.current) {
-        playPromiseRef.current.then(() => {
-          audioRef.current?.pause();
-          setIsPlaying(false);
-          setIsBuffering(false);
-        }).catch(() => {
-          setIsPlaying(false);
-          setIsBuffering(false);
-        });
-      } else {
-        audioRef.current.pause();
-        setIsPlaying(false);
-        setIsBuffering(false);
-      }
-    } else {
-      setIsBuffering(true);
-      const promise = audioRef.current.play();
-      playPromiseRef.current = promise;
-      if (promise !== undefined) {
-        promise.then(() => {
-          setIsPlaying(true);
-          setIsBuffering(false);
-        }).catch(e => {
-          console.error("Audio play failed:", e);
-          setIsPlaying(false);
-          setIsBuffering(false);
-        });
-      }
-    }
-  };
-
-  useEffect(() => {
-    setWaveformBars(Array.from({ length: 50 }).map(() => ({
-      height: 20 + Math.random() * 30,
-      delay: Math.random() * 0.5
-    })));
-
-    const audioEl = audioRef.current;
-
-    const handleVisibilityChange = () => {
-      if (audioEl) {
-        setIsPlaying(!audioEl.paused);
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      if (audioEl) {
-        audioEl.pause();
-        audioEl.removeAttribute('src');
-        audioEl.load();
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = volume;
-    }
-  }, [volume]);
-
-
-
   const formatTime = (time) => {
     const mins = Math.floor(time / 60);
     const secs = Math.floor(time % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-
   const bgmUrl = level.asset_base_url && level.music_hash
     ? `${level.asset_base_url}/${level.authorId || level.author}/${level.id}/${level.music_hash}`
     : null;
 
+  const proxiedBgmUrl = bgmUrl
+    ? (bgmUrl.startsWith('http') ? `/api/audio-proxy?url=${encodeURIComponent(bgmUrl)}` : bgmUrl)
+    : null;
+
+  const isThisTrackLoaded = trackId === id;
+  const hasAudio = !!(proxiedBgmUrl || isThisTrackLoaded);
+
+  useEffect(() => {
+    if (isThisTrackLoaded && level.title && trackMeta && trackMeta.title !== level.title) {
+      loadTrack(id, proxiedBgmUrl || '', {
+        title: level.title,
+        thumbnail: level.thumbnail,
+        href: `/levels/${id}`,
+      });
+    }
+  }, [isThisTrackLoaded, level.title]);
+
+  const togglePlay = () => {
+    if (isThisTrackLoaded) {
+      ctxTogglePlay();
+    } else if (proxiedBgmUrl) {
+      ctxPlay(id, proxiedBgmUrl, {
+        title: level.title,
+        thumbnail: level.thumbnail,
+        href: `/levels/${id}`,
+      });
+    }
+  };
+
+  const DESC_LIMIT = 300;
+  const descText = levelData.description || '';
+  const descNeedsExpand = descText.length > DESC_LIMIT;
+
   const [showFullDesc, setShowFullDesc] = useState(false);
-  const [commentCount, setCommentCount] = useState(level.commentsCount || 0);
+  const [commentCount, setCommentCount] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [page, setPage] = useState(1);
   const [trends, setTrends] = useState({ likes: [], comments: [] });
@@ -485,7 +553,7 @@ export default function LevelCard({ initialLevel, id, SONOLUS_SERVER_URL }) {
 
   useEffect(() => {
     const fetchSupplementalInfo = async () => {
-      const rawSonolusId = level.sonolusId || '';
+      const rawSonolusId = levelData.sonolusId || '';
       const cleanChartId = rawSonolusId.replace(/^UnCh-/, '');
 
       if (!cleanChartId) {
@@ -521,13 +589,13 @@ export default function LevelCard({ initialLevel, id, SONOLUS_SERVER_URL }) {
       }
     };
     fetchSupplementalInfo();
-  }, [level.sonolusId]);
+  }, [levelData.sonolusId]);
 
-  const totalComments = (commentCount > 0 ? commentCount : (level.commentsCount || commentCount || 0));
+  const totalComments = (commentCount > 0 ? commentCount : (levelData.commentsCount || commentCount || 0));
 
   useEffect(() => {
     const fetchCommentsWithCount = async () => {
-      const rawSonolusId = level.sonolusId || '';
+      const rawSonolusId = levelData.sonolusId || '';
       const cleanChartId = rawSonolusId.replace(/^UnCh-/, '');
       if (!cleanChartId) return;
 
@@ -561,12 +629,12 @@ export default function LevelCard({ initialLevel, id, SONOLUS_SERVER_URL }) {
       }
     };
     fetchCommentsWithCount();
-  }, [level.id, page]);
+  }, [levelData.id, page]);
 
 
   useEffect(() => {
     const fetchLeaderboard = async () => {
-      const rawSonolusId = level.sonolusId || '';
+      const rawSonolusId = levelData.sonolusId || '';
       const cleanChartId = rawSonolusId.replace(/^UnCh-/, '');
       if (!cleanChartId) return;
 
@@ -596,10 +664,10 @@ export default function LevelCard({ initialLevel, id, SONOLUS_SERVER_URL }) {
       }
     };
 
-    if (level.sonolusId) {
+    if (levelData.sonolusId) {
       fetchLeaderboard();
     }
-  }, [level.sonolusId, leaderboardPage, leaderboardType]);
+  }, [levelData.sonolusId, leaderboardPage, leaderboardType]);
 
 
 
@@ -612,7 +680,7 @@ export default function LevelCard({ initialLevel, id, SONOLUS_SERVER_URL }) {
 
   const likesHistory = (trends.likes && trends.likes.length > 0)
     ? trends.likes
-    : [0, 0, 0, 0, 0, 0, level.likes || 0];
+    : [0, 0, 0, 0, 0, 0, levelData.likes || 0];
 
 
   const commentsVal = loadingComments ? totalComments : (commentCount || 0);
@@ -627,9 +695,9 @@ export default function LevelCard({ initialLevel, id, SONOLUS_SERVER_URL }) {
       <div
         className="level-bg-blur"
         style={{
-          backgroundImage: level.backgroundV3Url ? `url(${level.backgroundV3Url})` :
-            level.backgroundUrl ? `url(${level.backgroundUrl})` :
-              level.thumbnail ? `url(${level.thumbnail})` : 'none'
+          backgroundImage: levelData.backgroundV3Url ? `url(${levelData.backgroundV3Url})` :
+            levelData.backgroundUrl ? `url(${levelData.backgroundUrl})` :
+              levelData.thumbnail ? `url(${levelData.thumbnail})` : 'none'
         }}
       />
 
@@ -644,7 +712,6 @@ export default function LevelCard({ initialLevel, id, SONOLUS_SERVER_URL }) {
             }
           }}
           className="back-btn"
-          style={{ position: 'relative', zIndex: 51 }}
         >
           <ArrowLeft size={20} />
           {t('levelDetail.back')}
@@ -654,19 +721,20 @@ export default function LevelCard({ initialLevel, id, SONOLUS_SERVER_URL }) {
       <div className="level-detail-container">
         <div className="level-top-section">
           <div className="level-image-container" style={{ position: 'relative' }}>
-            {level.thumbnail ? (
+            {levelData.thumbnail ? (
               <>
-                { }
                 <img
-                  src={level.thumbnail}
+                  src={levelData.thumbnail}
                   className="level-cover-aura"
                   alt=""
                   aria-hidden="true"
                 />
                 <img
-                  src={level.thumbnail}
+                  src={levelData.thumbnail}
                   className="level-cover"
-                  alt={level.title}
+                  alt={levelData.title}
+                  fetchPriority="high"
+                  loading="eager"
                 />
               </>
             ) : (
@@ -674,7 +742,7 @@ export default function LevelCard({ initialLevel, id, SONOLUS_SERVER_URL }) {
                 <span>{t('common.noImage')}</span>
               </div>
             )}
-            {(level.rating !== undefined && level.rating !== null) && (
+            {(levelData.rating !== undefined && levelData.rating !== null) && (
               <div className="lv-badge" style={{
                 position: 'absolute',
                 top: '10px',
@@ -690,18 +758,17 @@ export default function LevelCard({ initialLevel, id, SONOLUS_SERVER_URL }) {
                 zIndex: 2,
                 letterSpacing: '0.5px'
               }}>
-                Lv. {parseFloat(Number(level.rating || 0).toFixed(2))}
+                Lv. {parseFloat(Number(levelData.rating || 0).toFixed(2))}
               </div>
             )}
           </div>
 
           <div className="level-info">
-            { }
             <div className="level-title-wrapper" style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <MarqueeText textComponent="h1" className="level-title" maxLength={20}>
-                {level.title}
+                {levelData.title}
               </MarqueeText>
-              {level.staffPick && (
+              {levelData.staffPick && (
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -724,29 +791,60 @@ export default function LevelCard({ initialLevel, id, SONOLUS_SERVER_URL }) {
             <div className="level-credits">
               <div className="level-credit-item">
                 <span className="credit-label">{t('levelDetail.by')}</span>
-                <span><FormattedText text={level.artists || 'Unknown Artist'} /></span>
+                <span><FormattedText text={levelData.artists || 'Unknown Artist'} /></span>
               </div>
               <div className="level-credit-item">
                 <span className="credit-label">{t('levelDetail.chartedBy')}</span>
-                <Link href={`/user/${level.authorHandle || level.authorId}`} className="charter-link"><FormattedText text={level.author} /></Link>
+                <span
+                  ref={authorLinkRef}
+                  style={{ position: 'relative', display: 'inline-block' }}
+                  onMouseEnter={handleAuthorEnter}
+                  onMouseLeave={handleAuthorLeave}
+                >
+                  <Link href={`/user/${levelData.authorHandle || levelData.authorId}`} className="charter-link">
+                    <FormattedText text={levelData.author} />
+                  </Link>
+                  {showAuthorPopout && (
+                    <AuthorPopout authorId={levelData.authorId} anchorRect={authorAnchorRect} />
+                  )}
+                </span>
               </div>
               <div className="level-credit-item">
                 <span className="credit-label"><Calendar size={14} style={{ marginRight: '4px', verticalAlign: 'text-bottom' }} /></span>
-                <span>{level.createdAt ? new Date(level.createdAt).toLocaleDateString() : 'Unknown Date'}</span>
+                <span
+                  title={levelData.createdAt ? (() => {
+                    const d = new Date(levelData.createdAt);
+                    const offset = -d.getTimezoneOffset();
+                    const sign = offset >= 0 ? '+' : '-';
+                    const h = String(Math.floor(Math.abs(offset) / 60)).padStart(2, '0');
+                    const m = String(Math.abs(offset) % 60).padStart(2, '0');
+                    return `${d.toLocaleDateString()} ${d.toLocaleTimeString()} UTC${sign}${h}:${m}`;
+                  })() : ''}
+                  style={{ cursor: 'default' }}
+                >
+                  {levelData.createdAt ? new Date(levelData.createdAt).toLocaleDateString() : 'Unknown Date'}
+                </span>
               </div>
             </div>
 
-            {level.description && (
+            {levelData.description && (
               <div className="level-description" style={{ width: '100%', textAlign: 'left', boxSizing: 'border-box' }}>
-                <FormattedText text={level.description} />
+                <FormattedText text={descNeedsExpand && !showFullDesc ? descText.slice(0, DESC_LIMIT) + '…' : descText} />
+                {descNeedsExpand && (
+                  <button
+                    onClick={() => setShowFullDesc(v => !v)}
+                    className="desc-read-more-btn"
+                  >
+                    {showFullDesc ? t('common.readLess', 'Read Less') : t('common.readMore', 'Read More')}
+                  </button>
+                )}
               </div>
             )}
 
             <div className="music-player">
               <div className="features-background">
-                {bgmUrl && audioMountKey && (
+                {isThisTrackLoaded && (
                   <WaveformPlayer
-                    key={`wf-${audioMountKey}`}
                     audioRef={audioRef}
                     isPlaying={isPlaying}
                   />
@@ -758,28 +856,32 @@ export default function LevelCard({ initialLevel, id, SONOLUS_SERVER_URL }) {
                   <div className="player-text">
                     <span className="player-title">{level.title}</span>
                   </div>
-                  <span className="player-duration">{formatTime(currentTime)} / {duration ? formatTime(duration) : '--:--'}</span>
+                  <span className="player-duration">
+                    {isThisTrackLoaded ? formatTime(currentTime) : '0:00'} / {isThisTrackLoaded && duration ? formatTime(duration) : '--:--'}
+                  </span>
                 </div>
 
                 <div className="player-controls">
-                  <button className={`play-btn ${isBuffering ? 'buffering' : ''}`} onClick={togglePlay}>
-                    {isBuffering ? (
+                  <button
+                    className={`play-btn ${isBuffering && isThisTrackLoaded ? 'buffering' : ''}`}
+                    onClick={togglePlay}
+                    disabled={!hasAudio}
+                    aria-label={isPlaying && isThisTrackLoaded ? t('levelDetail.pause', 'Pause') : t('levelDetail.play', 'Play')}
+                  >
+                    {isBuffering && isThisTrackLoaded ? (
                       <div style={{ width: '20px', height: '20px', border: '3px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-                    ) : isPlaying ? <Pause size={24} /> : <Play size={24} />}
+                    ) : (isPlaying && isThisTrackLoaded) ? <Pause size={24} /> : <Play size={24} />}
                   </button>
-                  { }
+
                   <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <input
                       type="range"
                       min="0"
-                      max={duration || 100}
-                      value={currentTime}
-                      onChange={(e) => {
-                        const time = parseFloat(e.target.value);
-                        setCurrentTime(time);
-                        if (audioRef.current) audioRef.current.currentTime = time;
-                      }}
+                      max={isThisTrackLoaded ? (duration || 100) : 100}
+                      value={isThisTrackLoaded ? currentTime : 0}
+                      onChange={(e) => seek(parseFloat(e.target.value))}
                       className="player-progress-slider"
+                      aria-label={t('levelDetail.seekBar', 'Seek')}
                       style={{
                         width: '100%',
                         height: '4px',
@@ -792,38 +894,21 @@ export default function LevelCard({ initialLevel, id, SONOLUS_SERVER_URL }) {
                   </div>
 
                   <div className="volume-control">
-                    <Volume2 size={18} />
+                    <Volume2 size={18} aria-hidden="true" />
                     <input
                       type="range"
                       min="0"
                       max="1"
-                      step="0.1"
+                      step="0.05"
                       value={volume}
                       onChange={(e) => setVolume(parseFloat(e.target.value))}
                       className="volume-slider"
+                      aria-label={t('levelDetail.volume', 'Volume')}
                       style={{ width: '60px' }}
                     />
                   </div>
                 </div>
               </div>
-
-              {bgmUrl && audioMountKey && (
-                <audio
-                  key={`aud-${audioMountKey}`}
-                  ref={audioRef}
-                  src={bgmUrl.startsWith('http') ? `/api/audio-proxy?url=${encodeURIComponent(bgmUrl)}` : bgmUrl}
-                  preload="metadata"
-                  style={{ display: 'none' }}
-                  crossOrigin="anonymous"
-                  onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
-                  onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
-                  onEnded={() => setIsPlaying(false)}
-                  onWaiting={() => setIsBuffering(true)}
-                  onPlaying={() => { setIsBuffering(false); setIsPlaying(true); }}
-                  onCanPlay={() => setIsBuffering(false)}
-                  onError={(e) => { console.warn("Audio error", e); setIsBuffering(false); }}
-                />
-              )}
             </div>
 
             <div className="level-actions">
@@ -855,11 +940,11 @@ export default function LevelCard({ initialLevel, id, SONOLUS_SERVER_URL }) {
         <div className="level-bottom-left">
           <AdminPanel
             targetType="chart"
-            targetData={{ status: level.status, staffPick: level.staffPick || level.staff_pick, staff_pick: level.staff_pick || level.staffPick, authorId: level.authorId, constant: level.rating }}
+            targetData={{ status: levelData.status, staffPick: levelData.staffPick || levelData.staff_pick, staff_pick: levelData.staff_pick || levelData.staffPick, authorId: levelData.authorId, constant: levelData.rating }}
             currentUser={sonolusUser}
             onAction={(action) => {
               if (action === 'toggleVisibility') {
-                updateVisibility(level.status === 'PUBLIC' ? 'PRIVATE' : 'PUBLIC');
+                updateVisibility(levelData.status === 'PUBLIC' ? 'PRIVATE' : 'PUBLIC');
               } else if (action === 'setVisibilityPublic') {
                 updateVisibility('PUBLIC');
               } else if (action === 'setVisibilityPrivate') {
@@ -871,7 +956,7 @@ export default function LevelCard({ initialLevel, id, SONOLUS_SERVER_URL }) {
               } else if (action === 'deleteChart') {
                 handleDelete();
               } else if (action === 'editConstant') {
-                const promptVal = prompt(`Enter new difficulty constant (currently ${parseFloat(Number(level.rating).toFixed(2))}):`, parseFloat(Number(level.rating).toFixed(2)));
+                const promptVal = prompt(`Enter new difficulty constant (currently ${parseFloat(Number(levelData.rating).toFixed(2))}):`, parseFloat(Number(levelData.rating).toFixed(2)));
                 if (promptVal !== null) {
                   const newRating = parseFloat(promptVal);
                   if (!isNaN(newRating)) {
@@ -884,22 +969,22 @@ export default function LevelCard({ initialLevel, id, SONOLUS_SERVER_URL }) {
             }}
           />
           <div className="stats-card">
-            <h3 className="stats-title">
+            <h2 className="stats-title">
               <Star size={18} fill="currentColor" />
               {t('levelDetail.statistics')}
-            </h3>
+            </h2>
             <div className="stats-list">
               <StatWithGraph
                 icon={Heart}
-                label={level.likes === 1 ? t('levelDetail.like') : t('levelDetail.likes')}
-                value={level.likes || 0}
+                label={levelData.likes === 1 ? t('levelDetail.like') : t('levelDetail.likes')}
+                value={levelData.likes || 0}
                 color="#f87171"
                 data={likesHistory}
               />
               <StatWithGraph
                 icon={MessageSquare}
-                label={level.comments === 1 ? t('levelDetail.comment') : t('levelDetail.comments')}
-                value={level.comments || 0}
+                label={levelData.comments === 1 ? t('levelDetail.comment') : t('levelDetail.comments')}
+                value={levelData.comments || 0}
                 color="#38bdf8"
                 data={commentsHistory}
               />
@@ -909,10 +994,10 @@ export default function LevelCard({ initialLevel, id, SONOLUS_SERVER_URL }) {
 
         <div className="level-bottom-right">
           <div className="comments-card">
-            <h3 className="stats-title" style={{ marginBottom: '20px' }}>
+            <h2 className="stats-title" style={{ marginBottom: '20px' }}>
               <MessageSquare size={18} />
               {t('levelDetail.comments') || 'Comments'} ({totalComments})
-            </h3>
+            </h2>
 
             {loadingComments ? (
               <div className="skeleton-container" style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px', minHeight: '400px' }}>
@@ -928,13 +1013,13 @@ export default function LevelCard({ initialLevel, id, SONOLUS_SERVER_URL }) {
                   const displayName = comment.account?.sonolus_username || comment.commenter;
 
                   const pfpHash = comment.account?.profile_hash;
-                  const commentUserAvatar = (pfpHash && level.asset_base_url && commenterId)
-                    ? `${level.asset_base_url}/${commenterId}/profile/${pfpHash}_webp`
+                  const commentUserAvatar = (pfpHash && levelData.asset_base_url && commenterId)
+                    ? `${levelData.asset_base_url}/${commenterId}/profile/${pfpHash}_webp`
                     : DEFAULT_PFP;
 
                   const bannerHash = comment.account?.banner_hash;
-                  const commentUserBanner = (bannerHash && level.asset_base_url && commenterId)
-                    ? `${level.asset_base_url}/${commenterId}/banner/${bannerHash}_webp`
+                  const commentUserBanner = (bannerHash && levelData.asset_base_url && commenterId)
+                    ? `${levelData.asset_base_url}/${commenterId}/banner/${bannerHash}_webp`
                     : null;
 
                   const bannerUrl = commentUserBanner || "/def.webp";
@@ -967,6 +1052,7 @@ export default function LevelCard({ initialLevel, id, SONOLUS_SERVER_URL }) {
                       <Link
                         href={commentUserLink ? `/user/${commentUserLink}` : '#'}
                         onClick={(e) => e.stopPropagation()}
+                        aria-label={displayName ? `View ${displayName}'s profile` : 'View profile'}
                         style={{
                           position: 'absolute',
                           left: '12px',
@@ -984,7 +1070,9 @@ export default function LevelCard({ initialLevel, id, SONOLUS_SERVER_URL }) {
                       >
                         <img
                           src={commentUserAvatar}
-                          alt=""
+                          alt={displayName || 'User avatar'}
+                          width="32"
+                          height="32"
                           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                           onError={(e) => { e.target.src = DEFAULT_PFP; }}
                         />
@@ -1197,8 +1285,8 @@ export default function LevelCard({ initialLevel, id, SONOLUS_SERVER_URL }) {
                       const userId = record.user_id || record.user?.id || record.submitter || record.account?.sonolus_id;
                       const pfpHash = record.profile_image_hash || record.user?.profile_image_hash || record.account?.profile_hash;
                       const bannerHash = record.banner_image_hash || record.user?.banner_image_hash || record.account?.banner_hash;
-                      const pfpUrl = (pfpHash && level.asset_base_url && userId) ? `${level.asset_base_url}/${userId}/profile/${pfpHash}_webp` : DEFAULT_PFP;
-                      const bannerUrl = (bannerHash && level.asset_base_url && userId) ? `${level.asset_base_url}/${userId}/banner/${bannerHash}_webp` : '/def.webp';
+                      const pfpUrl = (pfpHash && levelData.asset_base_url && userId) ? `${levelData.asset_base_url}/${userId}/profile/${pfpHash}_webp` : DEFAULT_PFP;
+                      const bannerUrl = (bannerHash && levelData.asset_base_url && userId) ? `${levelData.asset_base_url}/${userId}/banner/${bannerHash}_webp` : '/def.webp';
                       const displayName = record.display_name || record.account?.sonolus_username || record.submitter;
                       const handle = record.user?.handle || record.account?.sonolus_handle;
                       const userLink = handle || userId;
@@ -1234,8 +1322,8 @@ export default function LevelCard({ initialLevel, id, SONOLUS_SERVER_URL }) {
                       const userId = record.user_id || record.user?.id || record.submitter || record.account?.sonolus_id;
                       const pfpHash = record.profile_image_hash || record.user?.profile_image_hash || record.account?.profile_hash;
                       const bannerHash = record.banner_image_hash || record.user?.banner_image_hash || record.account?.banner_hash;
-                      const pfpUrl = (pfpHash && level.asset_base_url && userId) ? `${level.asset_base_url}/${userId}/profile/${pfpHash}_webp` : DEFAULT_PFP;
-                      const bannerUrl = (bannerHash && level.asset_base_url && userId) ? `${level.asset_base_url}/${userId}/banner/${bannerHash}_webp` : '/def.webp';
+                      const pfpUrl = (pfpHash && levelData.asset_base_url && userId) ? `${levelData.asset_base_url}/${userId}/profile/${pfpHash}_webp` : DEFAULT_PFP;
+                      const bannerUrl = (bannerHash && levelData.asset_base_url && userId) ? `${levelData.asset_base_url}/${userId}/banner/${bannerHash}_webp` : '/def.webp';
                       const displayName = record.display_name || record.account?.sonolus_username || record.submitter;
                       const handle = record.user?.handle || record.account?.sonolus_handle;
                       const userLink = handle || userId;
@@ -1271,8 +1359,8 @@ export default function LevelCard({ initialLevel, id, SONOLUS_SERVER_URL }) {
                       const userId = record.user_id || record.user?.id || record.submitter || record.account?.sonolus_id;
                       const pfpHash = record.profile_image_hash || record.user?.profile_image_hash || record.account?.profile_hash;
                       const bannerHash = record.banner_image_hash || record.user?.banner_image_hash || record.account?.banner_hash;
-                      const pfpUrl = (pfpHash && level.asset_base_url && userId) ? `${level.asset_base_url}/${userId}/profile/${pfpHash}_webp` : DEFAULT_PFP;
-                      const bannerUrl = (bannerHash && level.asset_base_url && userId) ? `${level.asset_base_url}/${userId}/banner/${bannerHash}_webp` : '/def.webp';
+                      const pfpUrl = (pfpHash && levelData.asset_base_url && userId) ? `${levelData.asset_base_url}/${userId}/profile/${pfpHash}_webp` : DEFAULT_PFP;
+                      const bannerUrl = (bannerHash && levelData.asset_base_url && userId) ? `${levelData.asset_base_url}/${userId}/banner/${bannerHash}_webp` : '/def.webp';
                       const displayName = record.display_name || record.account?.sonolus_username || record.submitter;
                       const handle = record.user?.handle || record.account?.sonolus_handle;
                       const userLink = handle || userId;
@@ -1317,8 +1405,8 @@ export default function LevelCard({ initialLevel, id, SONOLUS_SERVER_URL }) {
 
                     const pfpHash = record.profile_image_hash || record.user?.profile_image_hash || record.account?.profile_hash;
                     const bannerHash = record.banner_image_hash || record.user?.banner_image_hash || record.account?.banner_hash;
-                    const pfpUrl = (pfpHash && level.asset_base_url && userId) ? `${level.asset_base_url}/${userId}/profile/${pfpHash}_webp` : DEFAULT_PFP;
-                    const bannerUrl = (bannerHash && level.asset_base_url && userId) ? `${level.asset_base_url}/${userId}/banner/${bannerHash}_webp` : '/def.webp';
+                    const pfpUrl = (pfpHash && levelData.asset_base_url && userId) ? `${levelData.asset_base_url}/${userId}/profile/${pfpHash}_webp` : DEFAULT_PFP;
+                    const bannerUrl = (bannerHash && levelData.asset_base_url && userId) ? `${levelData.asset_base_url}/${userId}/banner/${bannerHash}_webp` : '/def.webp';
 
                     return (
                       <div key={record.id || rawIndex} className={`leaderboard-item ${isTop3 ? 'mobile-only-item' : ''}`} style={{ '--banner-url': `url(${bannerUrl})` }}>

@@ -7,7 +7,10 @@ import { useEffect, useState, Suspense } from "react";
 import { UserProvider, useUser } from "../contexts/UserContext";
 import { LanguageProvider, useLanguage } from "../contexts/LanguageContext";
 import { ThemeProvider, useTheme } from "../contexts/ThemeContext";
+import { AudioPlayerProvider } from "../contexts/AudioPlayerContext";
 import BackgroundDecorations from '../components/background-decorations/BackgroundDecorations';
+import MiniPlayer from '../components/mini-player/MiniPlayer';
+import NavigationProgress from '../components/navigation-progress/NavigationProgress';
 import { Menu, X, Sun, Moon, Globe, User, LogOut } from "lucide-react";
 import LiquidSelect from "../components/liquid-select/LiquidSelect";
 
@@ -166,6 +169,7 @@ function HeaderContent() {
                                 else setMobileMenuOpen(true);
                             }}
                             suppressHydrationWarning
+                            aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
                         >
                             {mobileMenuOpen && !isClosing ? <X size={24} /> : <Menu size={24} />}
                         </button>
@@ -175,7 +179,6 @@ function HeaderContent() {
 
             {(mobileMenuOpen || isClosing) && (
                 <div className={`mobile-menu ${isClosing ? 'animate-slide-up-out' : 'animate-slide-down'}`}>
-                    {}
                     <div className="mobile-menu-expanded-header">
                         <Link href="/" onClick={handleMobileMenuClose} className="mobile-logo">
                             <img src="/636a8f1e76b38cb1b9eb0a3d88d7df6f.png" alt="UntitledCharts" />
@@ -190,7 +193,6 @@ function HeaderContent() {
                         </button>
                     </div>
 
-                    {}
                     <div className="mobile-menu-body">
                         <Suspense fallback={null}>
                             <NavLinks user={sonolusUser} t={t} onNavClick={handleMobileMenuClose} isMobile={true} />
@@ -289,7 +291,7 @@ function FooterContent() {
     return (
         <footer className="site-footer">
             <div className="footer-bg">
-                <img src="/636a8f1e76b38cb1b9eb0a3d88d7df6f.png" alt="Logo Background" className="footer-bg-logo" width="200" height="200" />
+                <img src="/636a8f1e76b38cb1b9eb0a3d88d7df6f.png" alt="Logo Background" className="footer-bg-logo" width="160" height="160" />
             </div>
 
             <div className="footer-content">
@@ -375,22 +377,48 @@ function RootLayoutInner({ children }) {
     const pathname = usePathname();
     const isLevelPage = pathname && typeof pathname === 'string' ? pathname.startsWith('/levels/') : false;
 
+    useEffect(() => {
+        const art = [
+            '%c',
+            '██╗░░░██╗███╗░░██╗████████╗██╗████████╗██╗░░░░░███████╗██████╗░',
+            '██║░░░██║████╗░██║╚══██╔══╝██║╚══██╔══╝██║░░░░░██╔════╝██╔══██╗',
+            '██║░░░██║██╔██╗██║░░░██║░░░██║░░░██║░░░██║░░░░░█████╗░░██║░░██║',
+            '██║░░░██║██║╚████║░░░██║░░░██║░░░██║░░░██║░░░░░██╔══╝░░██║░░██║',
+            '╚██████╔╝██║░╚███║░░░██║░░░██║░░░██║░░░███████╗███████╗██████╔╝',
+            '░╚═════╝░╚═╝░░╚══╝░░░╚═╝░░░╚═╝░░░╚═╝░░░╚══════╝╚══════╝╚═════╝░',
+            '',
+            '░█████╗░██╗░░██╗░█████╗░██████╗░████████╗░██████╗',
+            '██╔══██╗██║░░██║██╔══██╗██╔══██╗╚══██╔══╝██╔════╝',
+            '██║░░╚═╝███████║███████║██████╔╝░░░██║░░░╚█████╗░',
+            '██║░░██╗██╔══██║██╔══██║██╔══██╗░░░██║░░░░╚═══██╗',
+            '╚█████╔╝██║░░██║██║░░██║██║░░██║░░░██║░░░██████╔╝',
+            '░╚════╝░╚═╝░░╚═╝╚═╝░░╚═╝╚═╝░░╚═╝░░░╚═╝░░░╚═════╝░',
+        ].join('\n');
+
+        console.log(art, 'color: #38bdf8; font-family: monospace; font-size: 10px; line-height: 1.2;');
+        console.log('%cHello! Welcome to the browser console. Don\'t go here unless you know what you are doing. :3', 'color: #94a3b8; font-size: 13px; font-style: italic;');
+    }, []);
+
     return (
         <>
             <BackgroundDecorations />
+            <Suspense fallback={null}>
+                <NavigationProgress />
+            </Suspense>
             <HeaderContent />
             {isLevelPage ? (
-                <div key={pathname} className="animate-page-enter">
+                <div className="animate-page-enter">
                     {children}
                 </div>
             ) : (
                 <main className="main-content" style={{ flex: 1 }}>
-                    <div key={pathname} className="animate-page-enter" style={{ minHeight: 'inherit' }}>
+                    <div className="animate-page-enter">
                         {children}
                     </div>
                 </main>
             )}
             <FooterContent />
+            <MiniPlayer />
         </>
     );
 }
@@ -400,11 +428,13 @@ export default function ClientLayout({ children, variableClasses }) {
         <ThemeProvider>
             <LanguageProvider>
                 <UserProvider>
+                    <AudioPlayerProvider>
                     <body className={`${variableClasses} antialiased`}>
                         <RootLayoutInner>
                             {children}
                         </RootLayoutInner>
                     </body>
+                    </AudioPlayerProvider>
                 </UserProvider>
             </LanguageProvider>
         </ThemeProvider>

@@ -187,18 +187,19 @@
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    background-color: hsl(200, 70%, 50%);
-    color: white;
+    background-color: hsl(200, 80%, 42%);
+    color: #ffffff;
     padding: 12px 24px;
     border-radius: 30px;
-    font-weight: 600;
+    font-weight: 700;
     text-decoration: none;
     transition: all 0.2s;
     box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
 }
 
 .btn-primary:hover {
-    background-color: hsl(200, 70%, 60%);
+    background-color: hsl(200, 80%, 36%);
     transform: translateY(-2px);
     box-shadow: 0 6px 16px rgba(14, 165, 233, 0.4);
 }
@@ -277,23 +278,7 @@
     }
 
     .hero-description-box {
-        padding: 20px;
-        text-align: center !important;
-        margin: 0 auto !important;
-        width: 100%;
-        max-width: 95%;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .hero-description-box p {
-        text-align: center !important;
-        width: auto;
-        max-width: 100%;
-        margin: 0 auto;
-        display: inline-block;
+        display: none;
     }
 
     .hero-stats,
@@ -304,8 +289,9 @@
 
     .hero-indicators {
         bottom: 10px;
-        right: 50%;
-        transform: translateX(50%);
+        left: 50%;
+        right: auto;
+        transform: translateX(-50%);
     }
 }
 
@@ -326,27 +312,53 @@
     left: 50%;
     transform: translateX(-50%);
     display: flex;
-    gap: 12px;
+    align-items: center;
+    gap: 8px;
     z-index: 20;
 }
 
 .indicator-dot {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
     background: rgba(255, 255, 255, 0.3);
     border: none;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    flex-shrink: 0;
+    position: relative;
+    overflow: hidden;
+    padding: 0;
 }
 
 .indicator-dot:hover {
-    background: rgba(255, 255, 255, 0.5);
+    background: rgba(255, 255, 255, 0.55);
 }
 
 .indicator-dot.active {
+    width: 28px;
+    background: rgba(255, 255, 255, 0.2);
+    box-shadow: 0 0 8px rgba(56, 189, 248, 0.3);
+}
+
+.indicator-progress {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
     background: #38bdf8;
-    transform: scale(1.2);
+    border-radius: 999px;
+    transition: width 0.06s linear;
+    pointer-events: none;
+}
+
+body.light-mode .indicator-dot.active {
+    background: rgba(15, 23, 42, 0.15);
+    box-shadow: 0 0 8px rgba(2, 132, 199, 0.3);
+}
+
+body.light-mode .indicator-progress {
+    background: #0284c7;
 }
 
 @media (max-width: 768px) {
@@ -411,8 +423,4 @@ body.light-mode .hero-jacket-container {
 
 body.light-mode .indicator-dot {
     background: rgba(15, 23, 42, 0.2);
-}
-
-body.light-mode .indicator-dot.active {
-    background: #0f172a;
 }

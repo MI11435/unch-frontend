@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useEffect, useState, useRef, Suspense, useCallback } from "react";
 import Link from "next/link";
 import { Loader2, TrendingUp, Sparkles, Zap, Shuffle, PlayCircle, Settings, Clock, Star, Heart, Type, ArrowUp, ArrowDown, User } from "lucide-react";
@@ -41,7 +41,6 @@ function HomeContent() {
   const [totalResults, setTotalResults] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchType, setSearchType] = useState("newest");
-  const [metaIncludes, setMetaIncludes] = useState("title");
   const [sortBy, setSortBy] = useState("created_at");
   const [sortOrder, setSortOrder] = useState("desc");
 
@@ -65,12 +64,6 @@ function HomeContent() {
       setViewMode('search');
     }
   }, [searchParams]);
-
-  const [currentlyPlaying, setCurrentlyPlaying] = useState(null);
-  const audioRefs = useRef({});
-  const globalAudioRef = useRef(null);
-  const [globalBgmUrl, setGlobalBgmUrl] = useState(null);
-  const [refreshKey, setRefreshKey] = useState(0);
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerTitle, setDrawerTitle] = useState("");
@@ -108,6 +101,9 @@ function HomeContent() {
       title: item.title,
       artists: item.artists || "Unknown Artist",
       author: authorName,
+      authorId: item.author || "",
+      authorHandle: item.author_handle || item.author || "",
+      assetBaseUrl: baseUrl,
       coverUrl: coverUrl,
       bgmUrl: bgmUrl,
       backgroundUrl: backgroundUrl,
@@ -123,17 +119,17 @@ function HomeContent() {
   const fetchHomeData = useCallback(async () => {
     setLoading(true);
     try {
-      const apiBase = APILink;
-
       const [staffPicksRes, trendingRes, newRes] = await Promise.all([
-        fetch(`${apiBase}/api/charts?type=advanced&staff_pick=1&limit=10`),
-        fetch(`${apiBase}/api/charts?type=advanced&sort_by=decaying_likes&limit=10`),
-        fetch(`${apiBase}/api/charts?page=0&type=quick&limit=10`)
+        fetch(`${APILink}/api/charts?type=advanced&staff_pick=1&limit=10`),
+        fetch(`${APILink}/api/charts?type=advanced&sort_by=decaying_likes&limit=10`),
+        fetch(`${APILink}/api/charts?page=0&type=quick&limit=10`)
       ]);
 
-      const staffPicksJson = await staffPicksRes.json();
-      const trendingJson = await trendingRes.json();
-      const newJson = await newRes.json();
+      const [staffPicksJson, trendingJson, newJson] = await Promise.all([
+        staffPicksRes.json(),
+        trendingRes.json(),
+        newRes.json(),
+      ]);
 
       const base = staffPicksJson.asset_base_url || trendingJson.asset_base_url || "";
 
@@ -142,18 +138,16 @@ function HomeContent() {
         trending: (trendingJson.data || []).map(item => mapChartData(item, base)),
         newCharts: (newJson.data || []).map(item => mapChartData(item, base))
       });
-      setLoading(false);
     } catch (err) {
       console.error("Home fetch error:", err);
+    } finally {
       setLoading(false);
     }
-  }, [APILink, mapChartData, setHomeData, setLoading]);
+  }, [mapChartData]);
 
   const fetchSearchData = useCallback(async () => {
     setLoading(true);
     try {
-      const apiBase = APILink;
-
       const queryParams = new URLSearchParams();
       const actualType = searchType === 'newest' ? 'quick' : searchType;
       queryParams.append('type', actualType);
@@ -161,7 +155,6 @@ function HomeContent() {
       queryParams.append('limit', '10');
 
       if (staffPick && actualType !== 'random') queryParams.append('staff_pick', '1');
-
       if (sonolusHandleIs) queryParams.append('sonolus_handle_is', sonolusHandleIs);
 
       if (actualType === 'quick') {
@@ -184,35 +177,23 @@ function HomeContent() {
         queryParams.append('sort_order', sortOrder);
       }
 
-      const res = await fetch(`${apiBase}/api/charts?${queryParams.toString()}`);
+      const res = await fetch(`${APILink}/api/charts?${queryParams.toString()}`);
       const json = await res.json();
       const base = json.asset_base_url || "";
-
       const rawData = (json.data || []).map(item => mapChartData(item, base));
-      
       const uniquePosts = Array.from(new Map(rawData.map(item => [item.id, item])).values());
 
       setPosts(uniquePosts);
       const infiniteScrollTypes = ['newest'];
       setPageCount(json.pages || json.pageCount || (infiniteScrollTypes.includes(searchType) ? (page + 2) : 1));
       setTotalResults(json.total || (json.items?.length || json.data?.length || 0));
-      setLoading(false);
     } catch (err) {
       console.error(err);
       setError("Failed to load charts.");
+    } finally {
       setLoading(false);
     }
-  }, [APILink, searchType, page, staffPick, searchQuery, sortBy, sortOrder, minRating, maxRating, tags, minLikes, maxLikes, likedBy, titleIncludes, descriptionIncludes, artistsIncludes, mapChartData, setPosts, setPageCount, setTotalResults,
-    setLoading,
-    setError,
-    sonolusHandleIs
-  ]);
-
-  const FullLoading = () => (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '300px' }}>
-      <Loader2 className="animate-spin" size={48} style={{ color: '#38bdf8' }} />
-    </div>
-  );
+  }, [searchType, page, staffPick, searchQuery, sortBy, sortOrder, minRating, maxRating, tags, minLikes, maxLikes, likedBy, titleIncludes, descriptionIncludes, artistsIncludes, mapChartData, sonolusHandleIs]);
 
   useEffect(() => {
     if (viewMode === 'home') {
@@ -220,7 +201,7 @@ function HomeContent() {
     } else {
       fetchSearchData();
     }
-  }, [viewMode, fetchHomeData, fetchSearchData, refreshKey]);
+  }, [viewMode, fetchHomeData, fetchSearchData]);
 
   const handleSearch = (e) => {
     e?.preventDefault();
@@ -233,51 +214,20 @@ function HomeContent() {
   };
 
   const handlePlay = (id, bgmUrl = null) => {
-    if (currentlyPlaying && currentlyPlaying !== id) {
-      const prevAudio = audioRefs.current[currentlyPlaying];
-      if (prevAudio) {
-        prevAudio.pause();
-        prevAudio.currentTime = 0;
-      }
-    }
-
-    if (bgmUrl) {
-      if (currentlyPlaying === id) {
-        if (globalAudioRef.current) {
-          globalAudioRef.current.pause();
-          setCurrentlyPlaying(null);
-        }
-      } else {
-        setGlobalBgmUrl(bgmUrl);
-        setCurrentlyPlaying(id);
-      }
-    } else {
-      setCurrentlyPlaying(id);
-    }
+    if (!bgmUrl) return;
+    const proxied = bgmUrl.startsWith("http") && !bgmUrl.startsWith(window.location.origin)
+      ? `/api/audio-proxy?url=${encodeURIComponent(bgmUrl)}`
+      : bgmUrl;
+    play(id, proxied, { title: "", thumbnail: "", href: "" });
   };
-
-  useEffect(() => {
-    if (globalAudioRef.current && globalBgmUrl && currentlyPlaying) {
-      globalAudioRef.current.load();
-      globalAudioRef.current.play().catch(e => console.log("Global play error:", e));
-    }
-  }, [globalBgmUrl, currentlyPlaying]);
 
   const handleStop = (id) => {
-    if (currentlyPlaying === id) {
-      if (globalAudioRef.current) {
-        globalAudioRef.current.pause();
-      }
-      setCurrentlyPlaying(null);
-    }
+    if (trackId === id) pause();
   };
 
-  const handleAudioRef = (id, ref) => {
-    audioRefs.current[id] = ref;
-  };
+  const handleAudioRef = () => {};
 
   const viewParam = searchParams.get('view');
-
   useEffect(() => {
     if (viewParam === 'jadixexposed-egg-2026') {
       setViewMode('jadixexposed-egg-2026');
@@ -299,23 +249,8 @@ function HomeContent() {
     setDrawerOpen(true);
   };
 
-  useEffect(() => {
-    const handleGlobalClick = (e) => {
-      if (e.target.closest('.homepage-chart-card')) return;
-
-      if (currentlyPlaying) {
-        if (globalAudioRef.current) globalAudioRef.current.pause();
-        setCurrentlyPlaying(null);
-      }
-    };
-
-    document.addEventListener('click', handleGlobalClick);
-    return () => document.removeEventListener('click', handleGlobalClick);
-  }, [currentlyPlaying]);
-
   return (
     <div className="home-container">
-      <audio ref={globalAudioRef} src={globalBgmUrl} loop style={{ display: 'none' }} />
 
       {viewMode === 'home' ? (
         <div className="home-content animate-fade-in">
@@ -324,12 +259,8 @@ function HomeContent() {
           <div className="carousel-section-wrapper">
             <TrendingCarousel
               title={t('home.newCharts')}
-              icon={<Sparkles size={28} className="text-blue-400" />}
+              icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="5" width="14" height="14" rx="3" stroke="currentColor" strokeWidth="2"/><path d="M6 10H18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>}
               charts={homeData.newCharts}
-              onPlay={handlePlay}
-              currentlyPlaying={currentlyPlaying}
-              audioRefs={audioRefs}
-              onStop={handleStop}
               CardComponent={HomepageChartCard}
               onViewAll={() => handleViewAll(t('home.newCharts'), homeData.newCharts, "new")}
             />
@@ -338,12 +269,8 @@ function HomeContent() {
           <div className="carousel-section-wrapper">
             <TrendingCarousel
               title={t('home.trendingCharts')}
-              icon={<TrendingUp size={28} className="text-pink-400" />}
+              icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 20H3" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><path d="M10 16V10C10 8.89543 9.10457 8 8 8C6.89543 8 6 8.89543 6 10V16" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><path d="M18 16V6C18 4.89543 17.1046 4 16 4C14.8954 4 14 4.89543 14 6V16" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>}
               charts={homeData.trending}
-              onPlay={handlePlay}
-              currentlyPlaying={currentlyPlaying}
-              audioRefs={audioRefs}
-              onStop={handleStop}
               CardComponent={HomepageChartCard}
               onViewAll={() => handleViewAll(t('home.trendingCharts'), homeData.trending, "trending")}
             />
@@ -356,10 +283,6 @@ function HomeContent() {
             initialCharts={drawerCharts}
             fetchType={drawerFetchType}
             apiBase={APILink}
-            audioRefs={audioRefs}
-            currentlyPlaying={currentlyPlaying}
-            onPlay={handlePlay}
-            onStop={handleStop}
           />
 
           <div className="home-footer-action" style={{ textAlign: 'center', marginTop: 60, marginBottom: 40 }}>
@@ -371,190 +294,62 @@ function HomeContent() {
           </div>
         </div>
       ) : viewMode === 'jadixexposed-egg-2026' ? (
-        <div className="easter-egg-content animate-fade-in" style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'flex-start',
-          minHeight: '100vh',
-          padding: '120px 20px 60px',
-          gap: '30px',
-          background: 'linear-gradient(135deg, #0f0f1a 0%, #1a0a2e 50%, #0f0f1a 100%)'
-        }}>
-          <h1 style={{
-            fontSize: '2rem',
-            color: '#fff',
-            textAlign: 'center',
-            textShadow: '0 0 20px rgba(255, 100, 200, 0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '12px',
-            flexWrap: 'wrap',
-            margin: 0
-          }}>
-            <img src="/Untitled1472_20260120224400.jpg" alt="" style={{ width: '40px', height: '40px', borderRadius: '8px', objectFit: 'cover' }} />
-            You found the secret!
-            <img src="/Untitled1472_20260120224400.jpg" alt="" style={{ width: '40px', height: '40px', borderRadius: '8px', objectFit: 'cover' }} />
-          </h1>
-
-          <p style={{ color: 'rgba(255,255,255,0.7)', textAlign: 'center', maxWidth: '600px', margin: 0 }}>
-            Congratulations on discovering the Jadixexposed Easter Egg! Here are some exclusive images:
-          </p>
-
-          <div style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: '24px',
-            justifyContent: 'center',
-            alignItems: 'flex-start',
-            maxWidth: '900px',
-            width: '100%'
-          }}>
-            <div style={{
-              background: 'rgba(255,255,255,0.05)',
-              borderRadius: '16px',
-              padding: '16px',
-              border: '1px solid rgba(255,255,255,0.1)',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
-              flex: '1 1 300px',
-              maxWidth: '400px'
-            }}>
-              <img
-                src="/Untitled1472_20260120224400.jpg"
-                alt="Jadixexposed"
-                style={{
-                  width: '100%',
-                  borderRadius: '12px',
-                  display: 'block'
-                }}
-              />
-              <p style={{ color: '#fff', textAlign: 'center', marginTop: '12px', marginBottom: 0, fontSize: '0.9rem' }}>
-                Jadixexposed Original, a.k.a Jadix in a maid costume exposed by his muscular man
-              </p>
+        <div className="egg-page animate-fade-in">
+          <div className="egg-orb egg-orb-1" />
+          <div className="egg-orb egg-orb-2" />
+          <div className="egg-orb egg-orb-3" />
+          <div className="egg-inner">
+            <div className="egg-badge">SECRET UNLOCKED</div>
+            <h1 className="egg-title">
+              You found the Jadix Files
+              <span className="egg-title-sub">classified intel on a certain someone</span>
+            </h1>
+            <div className="egg-gallery">
+              <div className="egg-card">
+                <div className="egg-card-img-wrap">
+                  <img src="/Untitled1472_20260120224400.jpg" alt="Jadixexposed" loading="lazy" />
+                </div>
+                <p>Jadixexposed Original &mdash; Jadix in a maid costume, exposed by his muscular man</p>
+              </div>
+              <div className="egg-card">
+                <div className="egg-card-img-wrap">
+                  <img src="/reiyunlover.png" alt="Reiyunlover" loading="lazy" />
+                </div>
+                <p>Reiyunlover</p>
+              </div>
+              <div className="egg-card">
+                <div className="egg-card-img-wrap">
+                  <img src="/Untitled1498_20260206013808.webp" alt="Welcome Home Master" loading="lazy" />
+                </div>
+                <p>Jadix saying &quot;Welcome Home, Master&quot;</p>
+              </div>
             </div>
-            <div style={{
-              background: 'rgba(255,255,255,0.05)',
-              borderRadius: '16px',
-              padding: '16px',
-              border: '1px solid rgba(255,255,255,0.1)',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
-              flex: '1 1 300px',
-              maxWidth: '400px'
-            }}>
-              <img
-                src="/reiyunlover.png"
-                alt="Reiyunlover"
-                style={{
-                  width: '100%',
-                  borderRadius: '12px',
-                  display: 'block'
-                }}
-              />
-              <p style={{ color: '#fff', textAlign: 'center', marginTop: '12px', marginBottom: 0, fontSize: '0.9rem' }}>
-                Reiyunlover
-              </p>
+            <div className="egg-quotes">
+              <div className="egg-quote egg-quote-purple">
+                <div className="egg-quote-avatar">R</div>
+                <div className="egg-quote-body">
+                  <p>&quot;Hai hai! ReiyuN here~ Congratulations for finding this silly page about Jadix! I do lots of abominations so expect more things to pile up here whenever Jadix gets punished by me since I occasionally draw something for him whenever he does something stupid. That&apos;s all bai bai!!&quot;</p>
+                  <span>&mdash; ReiyuN</span>
+                </div>
+              </div>
+              <div className="egg-quote egg-quote-red">
+                <div className="egg-quote-avatar">J</div>
+                <div className="egg-quote-body">
+                  <p>&quot;if you see this, theres a missile coming to your house right now&quot;</p>
+                  <span>&mdash; Jadix</span>
+                </div>
+              </div>
             </div>
-            <div style={{
-              background: 'rgba(255,255,255,0.05)',
-              borderRadius: '16px',
-              padding: '16px',
-              border: '1px solid rgba(255,255,255,0.1)',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
-              flex: '1 1 300px',
-              maxWidth: '400px'
-            }}>
-              <img
-                src="/Untitled1498_20260206013808.webp"
-                alt="New Jadix Image"
-                style={{
-                  width: '100%',
-                  borderRadius: '12px',
-                  display: 'block'
-                }}
-              />
-              <p style={{ color: '#fff', textAlign: 'center', marginTop: '12px', marginBottom: 0, fontSize: '0.9rem' }}>
-                Jadix saying "Welcome Home, Master"
-              </p>
-            </div>
+            <Link href="/" className="egg-back-btn">Back to Safety</Link>
           </div>
-
-          <div style={{
-            display: 'flex',
-            gap: '20px',
-            flexWrap: 'wrap',
-            justifyContent: 'center',
-            width: '100%',
-            maxWidth: '900px',
-            marginTop: '10px'
-          }}>
-            {}
-            <div style={{
-              background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.15) 0%, rgba(56, 189, 248, 0.15) 100%)',
-              border: '1px solid rgba(168, 85, 247, 0.3)',
-              borderRadius: '16px',
-              padding: '20px 24px',
-              flex: '1 1 300px',
-              maxWidth: '600px'
-            }}>
-              <p style={{
-                color: '#fff',
-                fontSize: '0.95rem',
-                lineHeight: '1.6',
-                margin: 0,
-                fontStyle: 'italic',
-                textAlign: 'center'
-              }}>
-                "Hai hai! ReiyuN here~ Congratulations for finding this silly page about Jadix! I do lots of abominations so expect more things to pile up here whenever Jadix gets punished by me since I occasionally draw something for him whenever he does something stupid. That's all bai bai!!"
-                <br /><br />
-                <span style={{ fontWeight: 'bold', color: '#a855f7' }}>-ReiyuN</span>
-              </p>
-            </div>
-
-            {}
-            <div style={{
-              background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(249, 115, 22, 0.15) 100%)',
-              border: '1px solid rgba(239, 68, 68, 0.3)',
-              borderRadius: '16px',
-              padding: '20px 24px',
-              flex: '1 1 300px',
-              maxWidth: '600px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <p style={{
-                color: '#fff',
-                fontSize: '0.95rem',
-                lineHeight: '1.6',
-                margin: 0,
-                fontStyle: 'italic',
-                textAlign: 'center'
-              }}>
-                “if you see this, theres a missile coming to your house right now”
-                <br /><br />
-                <span style={{ fontWeight: 'bold', color: '#ef4444' }}>-Jadix</span>
-              </p>
-            </div>
-          </div>
-
-          <Link href="/" style={{
-            marginTop: '10px',
-            padding: '12px 24px',
-            background: 'linear-gradient(135deg, #38bdf8 0%, #a855f7 100%)',
-            borderRadius: '8px',
-            color: '#fff',
-            textDecoration: 'none',
-            fontWeight: 'bold',
-            transition: 'transform 0.2s, box-shadow 0.2s',
-            boxShadow: '0 4px 15px rgba(56, 189, 248, 0.3)'
-          }}>
-            ← Back to Home
-          </Link>
         </div>
+
       ) : (
         <div className="search-content animate-fade-in" style={{ width: '100%', maxWidth: '1000px', margin: '120px auto 0' }}>
           <div className="searchContainer">
+            <div className="search-filter-header">
+              <span>{t('nav.search', 'search')}</span>
+            </div>
             <form onSubmit={handleSearch} className="search-form" style={{ width: '100%' }}>
               <div className="search-controls-grid">
                 <div className="search-control-group">
@@ -584,8 +379,6 @@ function HomeContent() {
                       />
                       <label htmlFor="staffPick" style={{ margin: 0, fontSize: '0.9rem', color: 'rgba(255,255,255,0.9)', cursor: 'pointer' }}>{t('search.staffPickOnly')}</label>
                     </div>
-
-
 
                     <div className="search-control-group">
                       <label>{t('search.sortBy')}</label>
@@ -633,98 +426,40 @@ function HomeContent() {
                   <>
                     <div className="search-control-group">
                       <label>{t('search.minRating')}</label>
-                      <input
-                        type="number"
-                        placeholder={t('search.minRatingPlaceholder')}
-                        min="1"
-                        max="99"
-                        value={minRating}
-                        onChange={(e) => setMinRating(e.target.value)}
-                        className="liquid-input"
-                      />
+                      <input type="number" placeholder={t('search.minRatingPlaceholder')} min="1" max="99" value={minRating} onChange={(e) => setMinRating(e.target.value)} className="liquid-input" />
                     </div>
                     <div className="search-control-group">
                       <label>{t('search.maxRating')}</label>
-                      <input
-                        type="number"
-                        placeholder={t('search.maxRatingPlaceholder')}
-                        min="1"
-                        max="99"
-                        value={maxRating}
-                        onChange={(e) => setMaxRating(e.target.value)}
-                        className="liquid-input"
-                      />
+                      <input type="number" placeholder={t('search.maxRatingPlaceholder')} min="1" max="99" value={maxRating} onChange={(e) => setMaxRating(e.target.value)} className="liquid-input" />
                     </div>
                     <div className="search-control-group">
                       <label>{t('search.descriptionIncludes', 'Description Includes')}</label>
-                      <input
-                        type="text"
-                        placeholder={t('search.descriptionPlaceholder', 'Search in descriptions...')}
-                        value={descriptionIncludes}
-                        onChange={(e) => setDescriptionIncludes(e.target.value)}
-                        className="liquid-input"
-                      />
+                      <input type="text" placeholder={t('search.descriptionPlaceholder', 'Search in descriptions...')} value={descriptionIncludes} onChange={(e) => setDescriptionIncludes(e.target.value)} className="liquid-input" />
                     </div>
                     <div className="search-control-group">
                       <label>{t('search.titleIncludes')}</label>
-                      <input
-                        type="text"
-                        placeholder={t('search.titlePlaceholder', 'Search in titles...')}
-                        value={titleIncludes}
-                        onChange={(e) => setTitleIncludes(e.target.value)}
-                        className="liquid-input"
-                      />
+                      <input type="text" placeholder={t('search.titlePlaceholder', 'Search in titles...')} value={titleIncludes} onChange={(e) => setTitleIncludes(e.target.value)} className="liquid-input" />
                     </div>
                     <div className="search-control-group">
                       <label>{t('search.artistsIncludes')}</label>
-                      <input
-                        type="text"
-                        placeholder={t('search.artistsPlaceholder', 'Search in artists...')}
-                        value={artistsIncludes}
-                        onChange={(e) => setArtistsIncludes(e.target.value)}
-                        className="liquid-input"
-                      />
+                      <input type="text" placeholder={t('search.artistsPlaceholder', 'Search in artists...')} value={artistsIncludes} onChange={(e) => setArtistsIncludes(e.target.value)} className="liquid-input" />
                     </div>
                     <div className="search-control-group">
                       <label>{t('search.tags')}</label>
-                      <input
-                        type="text"
-                        placeholder={t('search.tagsPlaceholder', 'Comma-separated tags')}
-                        value={tags}
-                        onChange={(e) => setTags(e.target.value)}
-                        className="liquid-input"
-                      />
+                      <input type="text" placeholder={t('search.tagsPlaceholder', 'Comma-separated tags')} value={tags} onChange={(e) => setTags(e.target.value)} className="liquid-input" />
                     </div>
                     <div className="search-control-group">
                       <label>{t('search.authorHandle', 'Author Handle')}</label>
-                      <input
-                        type="text"
-                        placeholder={t('search.authorHandlePlaceholder', 'e.g. 78302')}
-                        value={sonolusHandleIs}
-                        onChange={(e) => setSonolusHandleIs(e.target.value)}
-                        className="liquid-input"
-                      />
+                      <input type="text" placeholder={t('search.authorHandlePlaceholder', 'e.g. 78302')} value={sonolusHandleIs} onChange={(e) => setSonolusHandleIs(e.target.value)} className="liquid-input" />
                     </div>
                     <div className="search-control-group" style={{ flexDirection: 'row', alignItems: 'center', minWidth: 'auto', flex: 'none', paddingBottom: '12px' }}>
-                      <input
-                        type="checkbox"
-                        id="likedByMe"
-                        checked={likedBy}
-                        onChange={(e) => setLikedBy(e.target.checked)}
-                        className="accent-sky-500"
-                        style={{ width: '18px', height: '18px', margin: 0, cursor: 'pointer' }}
-                      />
+                      <input type="checkbox" id="likedByMe" checked={likedBy} onChange={(e) => setLikedBy(e.target.checked)} className="accent-sky-500" style={{ width: '18px', height: '18px', margin: 0, cursor: 'pointer' }} />
                       <label htmlFor="likedByMe" style={{ margin: 0, fontSize: '0.9rem', color: 'rgba(255,255,255,0.9)', cursor: 'pointer' }}>{t('search.likedByMe', 'Liked by me')}</label>
                     </div>
                   </>
                 )}
 
-                <button
-                  type="submit"
-                  className="search-btn"
-                >
-                  {t('search.search')}
-                </button>
+                <button type="submit" className="search-btn">{t('search.search')}</button>
               </div>
             </form>
           </div>
@@ -733,24 +468,17 @@ function HomeContent() {
             <ChartsList
               posts={posts}
               loading={loading}
-              currentlyPlaying={currentlyPlaying}
-              audioRefs={audioRefs}
-              onPlay={handlePlay}
-              onStop={handleStop}
-              onAudioRef={handleAudioRef}
               sonolusUser={sonolusUser}
             />
           </div>
 
-          <PaginationControls
-            currentPage={page}
-            pageCount={pageCount}
-            onPageChange={setPage}
-            posts={posts}
-            totalCount={totalResults}
-            isRandom={searchType === 'random'}
-            onReroll={() => setRefreshKey(prev => prev + 1)}
-          />
+          {pageCount > 1 && (
+            <PaginationControls
+              currentPage={page}
+              pageCount={pageCount}
+              onPageChange={(p) => setPage(p)}
+            />
+          )}
         </div>
       )}
     </div>
@@ -759,11 +487,7 @@ function HomeContent() {
 
 export default function Home() {
   return (
-    <Suspense fallback={
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', color: 'white' }}>
-        <Loader2 className="animate-spin" size={48} />
-      </div>
-    }>
+    <Suspense fallback={null}>
       <HomeContent />
     </Suspense>
   );

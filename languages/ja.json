@@ -5,7 +5,31 @@
     "dashboard": "ダッシュボード",
     "login": "ログイン",
     "logout": "ログアウト",
-    "profile": "プロフィール"
+    "profile": "プロフィール",
+    "search": "search"
+  },
+  "userProfile": {
+    "back": "戻る",
+    "charts": "人気の譜面",
+    "charts_singular": "{1} 譜面",
+    "charts_plural": "{1} 譜面",
+    "noCharts": "このユーザーはまだ譜面を作っていません :<",
+    "loading": "プロフィールを読み込み中...",
+    "notFound": "ユーザーが見つかりません",
+    "doesNotExist": "このユーザープロフィールは存在しません。",
+    "backHome": "ホームへ戻る",
+    "editProfile": "プロフィール編集",
+    "totalLikes": "いいね",
+    "likes_singular": "{1} いいね",
+    "likes_plural": "{1} いいね",
+    "totalComments": "コメント",
+    "comments_singular": "{1} コメント",
+    "comments_plural": "{1} コメント",
+    "owner": "オーナー",
+    "admin": "管理者",
+    "mod": "モデレーター",
+    "chartsLiked": "いいねした譜面",
+    "commentsMade": "コメント数"
   },
   "home": {
     "newCharts": "新着の創作譜面",
@@ -134,7 +158,11 @@
     "noResults": "結果がありません",
     "noImage": "画像なし",
     "unknownArtist": "不明なアーティスト",
-    "unknown": "不明"
+    "unknown": "不明",
+    "loadMore": "もっと見る",
+    "more": "件",
+    "readMore": "続きを読む",
+    "readLess": "閉じる"
   },
   "card": {
     "level": "Lv. {1}"

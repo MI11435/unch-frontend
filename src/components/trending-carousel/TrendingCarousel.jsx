@@ -12,12 +12,8 @@ export default function TrendingCarousel({
     charts = [],
     loading = false,
     linkHref,
-    onPlay,
-    currentlyPlaying,
-    audioRefs,
     CardComponent,
-    onStop,
-    onViewAll
+    onViewAll,
 }) {
     const { t } = useLanguage();
     const scrollRef = useRef(null);
@@ -104,15 +100,7 @@ export default function TrendingCarousel({
                                 key={chart.id}
                                 chart={chart}
                                 index={index}
-                                showPlayButton={true}
-                                onPlay={onPlay}
-                                onStop={onStop}
-                                isPlaying={currentlyPlaying === chart.id}
-                                audioRef={(ref) => {
-                                    if (audioRefs && audioRefs.current) {
-                                        audioRefs.current[chart.id] = ref;
-                                    }
-                                }}
+                                totalCards={charts.length}
                             />
                         );
                     })}

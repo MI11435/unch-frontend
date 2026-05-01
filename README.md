@@ -58,7 +58,7 @@ NEXT_PUBLIC_SONOLUS_SERVER_URL=https://your-sonolus-server.com
 
 ## 🛠️ Tech Stack
 
-- **Framework**: [Next.js 15](https://nextjs.org) (App Router)
+- **Framework**: [Next.js 16](https://nextjs.org) (App Router)
 - **Styling**: Native CSS Modules & Global Styles
 - **OG Generation**: `next/og` (Satori)
 
