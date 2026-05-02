@@ -221,7 +221,7 @@ export default function CountdownPage({ params, chartStatus }) {
                         <h1 className="countdown-title">{level.title}</h1>
                         <p className="countdown-artist">{level.artists}</p>
                         {level.rating !== undefined && (
-                            <span className="countdown-rating">Lv. {level.rating}</span>
+                            <span className="countdown-rating">{t('levelDetail.level', { 1: level.rating })}</span>
                         )}
 
                         <Link href={`/user/${authorHandle}`} className="countdown-author" style={{ backgroundImage: `url(${authorBannerUrl})` }}>
