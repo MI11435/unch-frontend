@@ -5,6 +5,7 @@ import { emojis } from '../../../data/emojis';
 const logoUrl = new URL('../../../../public/636a8f1e76b38cb1b9eb0a3d88d7df6f.png', import.meta.url);
 const mikuUrl = new URL('../../../../public/mikudayo.png', import.meta.url);
 const starsUrl = new URL('../../../../public/stars.png', import.meta.url);
+const defpfpUrl = new URL('../../../../public/defpfp.webp', import.meta.url);
 
 export const runtime = 'edge';
 export const revalidate = 3600;
@@ -82,6 +83,7 @@ export default async function Image({ params }) {
         const logoPromise = fetch(logoUrl).then(r => r.ok ? r.arrayBuffer() : null).catch(() => null);
         const mikuPromise = fetch(mikuUrl).then(r => r.ok ? r.arrayBuffer() : null).catch(() => null);
         const starsPromise = fetch(starsUrl).then(r => r.ok ? r.arrayBuffer() : null).catch(() => null);
+        const defpfpPromise = fetch(defpfpUrl).then(r => r.ok ? r.arrayBuffer() : null).catch(() => null);
 
         let bgPromise = Promise.resolve(null);
         let jacketPromise = Promise.resolve(null);
@@ -125,16 +127,17 @@ export default async function Image({ params }) {
             } catch (e) { }
         });
 
-        const [logoBuffer, mikuBuffer, starsBuffer, bgBuffer, jacketBuffer, pfpBuffer] = await Promise.all([
-            logoPromise, mikuPromise, starsPromise, bgPromise, jacketPromise, pfpPromise, ...emojiPromises
+        const [logoBuffer, mikuBuffer, starsBuffer, defpfpBuffer, bgBuffer, jacketBuffer, pfpBuffer] = await Promise.all([
+            logoPromise, mikuPromise, starsPromise, defpfpPromise, bgPromise, jacketPromise, pfpPromise, ...emojiPromises
         ]);
 
         const logoData = bufferToBase64(logoBuffer);
         const mikuData = bufferToBase64(mikuBuffer);
         const starsData = bufferToBase64(starsBuffer);
+        const defpfpData = bufferToBase64(defpfpBuffer, 'image/webp');
         const backgroundData = bufferToBase64(bgBuffer, 'image/jpeg');
         const jacketData = bufferToBase64(jacketBuffer, 'image/jpeg');
-        const authorPfpData = bufferToBase64(pfpBuffer, 'image/webp');
+        const authorPfpData = bufferToBase64(pfpBuffer, 'image/png');
 
         const renderTextWithEmojis = (text, fontSize = 24) => {
             if (!text) return null;
@@ -403,11 +406,7 @@ export default async function Image({ params }) {
                                     justifyContent: 'center',
                                     background: '#1e293b'
                                 }}>
-                                    {authorPfpData ? (
-                                        <img src={authorPfpData} width={32} height={32} style={{ objectFit: 'cover' }} />
-                                    ) : (
-                                        <div style={{ width: 32, height: 32, background: '#334155' }}></div>
-                                    )}
+                                    <img src={authorPfpData || defpfpData} width={32} height={32} style={{ objectFit: 'cover' }} />
                                 </div>
                                 Charted by {renderTextWithEmojis((levelData.author_full || levelData.author || 'Unknown').slice(0, 30), 24)}
                             </div>
