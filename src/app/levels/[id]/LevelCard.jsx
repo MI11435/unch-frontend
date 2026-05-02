@@ -820,11 +820,11 @@ export default function LevelCard({ initialLevel, id, SONOLUS_SERVER_URL }) {
                     const sign = offset >= 0 ? '+' : '-';
                     const h = String(Math.floor(Math.abs(offset) / 60)).padStart(2, '0');
                     const m = String(Math.abs(offset) % 60).padStart(2, '0');
-                    return `${d.toLocaleDateString()} ${d.toLocaleTimeString()} UTC${sign}${h}:${m}`;
+                    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${d.toLocaleTimeString('en-US')} UTC${sign}${h}:${m}`;
                   })() : ''}
                   style={{ cursor: 'default' }}
                 >
-                  {levelData.createdAt ? new Date(levelData.createdAt).toLocaleDateString() : 'Unknown Date'}
+                  {levelData.createdAt ? (() => { const d = new Date(levelData.createdAt); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })() : 'Unknown Date'}
                 </span>
               </div>
             </div>
