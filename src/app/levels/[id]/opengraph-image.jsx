@@ -1,7 +1,8 @@
 import { ImageResponse } from 'next/og';
-import { fontDBBase64, fontEBBase64 } from '../../../data/fonts';
+import { getDecodedFonts, getDecodedFontDB } from '../../../data/fontLoader';
 
 export const runtime = 'edge';
+export const revalidate = 3600;
 export const alt = 'Level Detail';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
@@ -49,17 +50,8 @@ export default async function Image({ params }) {
             }
         } catch (e) { console.error("Could not fetch level", e); }
 
-        const fonts = [];
-        let fontDataDB = null;
-        let fontDataEB = null;
-
-        
         if (!levelData) {
-            try {
-                fontDataDB = Uint8Array.from(atob(fontDBBase64), c => c.charCodeAt(0)).buffer;
-            } catch (e) { }
-            if (fontDataDB) fonts.push({ name: 'Rodin', data: fontDataDB, weight: 400, style: 'normal' });
-
+            const fonts = getDecodedFontDB();
             return new ImageResponse(
                 (
                     <div style={{ background: '#0f172a', width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: fonts.length > 0 ? 'Rodin' : 'sans-serif' }}>
@@ -110,24 +102,19 @@ export default async function Image({ params }) {
             }).catch(() => null);
         }
 
-        let fontDB = null;
-        let fontEB = null;
-        try {
-            fontDB = Uint8Array.from(atob(fontDBBase64), c => c.charCodeAt(0)).buffer;
-            fontEB = Uint8Array.from(atob(fontEBBase64), c => c.charCodeAt(0)).buffer;
-        } catch (e) { console.error('Failed to load fonts:', e); }
+        const fonts = getDecodedFonts();
 
         const emojiDataMap = {};
         const emojiPromises = Array.from(requiredEmojiKeys).map(async (name) => {
             try {
                 const config = emojis[name];
-                let imgUrl = config.image.startsWith('http') ? config.image : `${appUrl}/emojis/${config.image}`;
+                const imgUrl = config.image.startsWith('http') ? config.image : `${appUrl}/emojis/${config.image}`;
                 const imgRes = await fetch(imgUrl);
                 if (imgRes.ok) {
                     const buffer = await imgRes.arrayBuffer();
                     emojiDataMap[name] = bufferToBase64(buffer);
                 }
-            } catch (e) { console.error('Emoji load failed', e) }
+            } catch (e) { }
         });
 
         const [logoBuffer, mikuBuffer, starsBuffer, bgBuffer, jacketBuffer, pfpBuffer] = await Promise.all([
@@ -140,9 +127,6 @@ export default async function Image({ params }) {
         const backgroundData = bufferToBase64(bgBuffer, 'image/jpeg');
         const jacketData = bufferToBase64(jacketBuffer, 'image/jpeg');
         const authorPfpData = bufferToBase64(pfpBuffer, 'image/webp');
-
-        if (fontDB) fonts.push({ name: 'Rodin', data: fontDB, weight: 400, style: 'normal' });
-        if (fontEB) fonts.push({ name: 'Rodin', data: fontEB, weight: 700, style: 'normal' });
 
         const renderTextWithEmojis = (text, fontSize = 24) => {
             if (!text) return null;

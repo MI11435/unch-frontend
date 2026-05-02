@@ -1,8 +1,9 @@
 import { ImageResponse } from 'next/og';
-import { fontDBBase64, fontEBBase64 } from '../../../data/fonts';
+import { getDecodedFonts } from '../../../data/fontLoader';
 import { customProfiles } from '../../../data/customProfiles';
 
 export const runtime = 'edge';
+export const revalidate = 3600;
 export const alt = 'User Profile';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
@@ -13,61 +14,35 @@ export default async function Image({ params }) {
     const { id } = params;
     const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
-    let logoData = null;
-    let pfpData = null;
     let accountData = null;
     let charts = [];
     let assetBaseUrl = null;
 
-    
-    try {
-        const logoUrl = new URL('../../../../public/636a8f1e76b38cb1b9eb0a3d88d7df6f.png', import.meta.url);
-        const logoRes = await fetch(logoUrl);
-        if (logoRes.ok) logoData = await logoRes.arrayBuffer();
-    } catch (e) {
-        console.error("OG Logo fetch failed", e);
+    const logoPromise = fetch(new URL('../../../../public/636a8f1e76b38cb1b9eb0a3d88d7df6f.png', import.meta.url))
+        .then(r => r.ok ? r.arrayBuffer() : null).catch(() => null);
+
+    const handlePromise = fetch(`${apiUrl}/api/accounts/handle/${id}/`)
+        .then(async r => {
+            if (!r.ok) return null;
+            const handleData = await r.json();
+            if (!handleData.sonolus_id) return null;
+            const profileRes = await fetch(`${apiUrl}/api/accounts/${handleData.sonolus_id}`);
+            return profileRes.ok ? profileRes.json() : null;
+        }).catch(() => null);
+
+    const directPromise = fetch(`${apiUrl}/api/accounts/${id}`)
+        .then(r => r.ok ? r.json() : null).catch(() => null);
+
+    const [logoData, handleResult, directResult] = await Promise.all([logoPromise, handlePromise, directPromise]);
+
+    const data = handleResult || directResult;
+    if (data?.account) {
+        accountData = data.account;
+        charts = data.charts || [];
+        assetBaseUrl = data.asset_base_url;
     }
 
-    
-    try {
-        let data = null;
-
-        
-        try {
-            const handleRes = await fetch(`${apiUrl}/api/accounts/handle/${id}/`);
-            if (handleRes.ok) {
-                const handleData = await handleRes.json();
-                if (handleData.sonolus_id) {
-                    const profileRes = await fetch(`${apiUrl}/api/accounts/${handleData.sonolus_id}`);
-                    if (profileRes.ok) {
-                        data = await profileRes.json();
-                    }
-                }
-            }
-        } catch (e) { }
-
-        
-        if (!data) {
-            const res = await fetch(`${apiUrl}/api/accounts/${id}`);
-            if (res.ok) {
-                data = await res.json();
-            }
-        }
-
-        if (data && data.account) {
-            accountData = data.account;
-            charts = data.charts || [];
-            assetBaseUrl = data.asset_base_url;
-        }
-    } catch (e) { }
-
-    const fonts = [];
-    try {
-        const fontDBBuffer = Uint8Array.from(atob(fontDBBase64), c => c.charCodeAt(0)).buffer;
-        const fontEBBuffer = Uint8Array.from(atob(fontEBBase64), c => c.charCodeAt(0)).buffer;
-        fonts.push({ name: 'Rodin', data: fontDBBuffer, weight: 400, style: 'normal' });
-        fonts.push({ name: 'Rodin', data: fontEBBuffer, weight: 700, style: 'normal' });
-    } catch (e) { console.error('Failed to load fonts:', e); }
+    const fonts = getDecodedFonts();
 
     
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001';

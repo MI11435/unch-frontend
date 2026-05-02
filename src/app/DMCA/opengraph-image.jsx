@@ -1,24 +1,15 @@
 import { ImageResponse } from 'next/og';
-import { fontDBBase64, fontEBBase64 } from '../../data/fonts';
+import { getDecodedFonts } from '../../data/fontLoader';
 
 export const runtime = 'edge';
+export const revalidate = false;
 export const alt = 'Untitled Charts - DMCA Policy';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
 export default async function Image() {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001';
-
-    const fonts = [];
-    try {
-        const fontDBBuffer = Uint8Array.from(atob(fontDBBase64), c => c.charCodeAt(0)).buffer;
-        const fontEBBuffer = Uint8Array.from(atob(fontEBBase64), c => c.charCodeAt(0)).buffer;
-        
-        fonts.push({ name: 'Rodin', data: fontDBBuffer, weight: 400, style: 'normal' });
-        fonts.push({ name: 'Rodin', data: fontEBBuffer, weight: 700, style: 'normal' });
-    } catch (e) {
-        console.error('Failed to load fonts for OG image', e);
-    }
+    const fonts = getDecodedFonts();
 
     return new ImageResponse(
         (
