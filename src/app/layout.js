@@ -7,11 +7,13 @@ import ClientLayout from "./ClientLayout";
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
+  display: "swap",
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  display: "swap",
 });
 
 const siteUrl = process.env.NEXT_PUBLIC_DOMAIN || 'http://localhost:3001';
@@ -49,6 +51,8 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         {assetCdn && <link rel="preconnect" href={assetCdn} crossOrigin="anonymous" />}
         <link rel="dns-prefetch" href="https://ba14959b4680d4b81463a1d708c63691.untitledcharts.com" />
         <Script

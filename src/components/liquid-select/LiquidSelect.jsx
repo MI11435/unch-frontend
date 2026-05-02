@@ -25,27 +25,32 @@ const LiquidSelect = ({ value, onChange, options, label, icon: Icon, className, 
 
     const handleOpen = () => {
         if (!isOpen && containerRef.current) {
-            const rect = containerRef.current.getBoundingClientRect();
-            const spaceBelow = window.innerHeight - rect.bottom;
-            const dropUp = spaceBelow < 200 && rect.top > 200;
-            const isMobile = window.innerWidth <= 768;
+            requestAnimationFrame(() => {
+                if (!containerRef.current) return;
+                const rect = containerRef.current.getBoundingClientRect();
+                const vh = window.innerHeight;
+                const vw = window.innerWidth;
+                const spaceBelow = vh - rect.bottom;
+                const dropUp = spaceBelow < 200 && rect.top > 200;
+                const isMobile = vw <= 768;
 
-            let left = rect.left;
-            const minWidth = Math.max(rect.width, 160);
+                let left = rect.left;
+                const minWidth = Math.max(rect.width, 160);
 
-            if (isMobile && left + minWidth > window.innerWidth - 8) {
-                left = Math.max(8, window.innerWidth - minWidth - 8);
-            }
+                if (isMobile && left + minWidth > vw - 8) {
+                    left = Math.max(8, vw - minWidth - 8);
+                }
 
-            setDropdownStyle({
-                position: "fixed",
-                left,
-                width: minWidth,
-                zIndex: 9999999,
-                marginTop: 0,
-                ...(dropUp
-                    ? { bottom: window.innerHeight - rect.top + 4, top: "auto" }
-                    : { top: rect.bottom + 4, bottom: "auto" }),
+                setDropdownStyle({
+                    position: "fixed",
+                    left,
+                    width: minWidth,
+                    zIndex: 9999999,
+                    marginTop: 0,
+                    ...(dropUp
+                        ? { bottom: vh - rect.top + 4, top: "auto" }
+                        : { top: rect.bottom + 4, bottom: "auto" }),
+                });
             });
         }
         setIsOpen(v => !v);

@@ -9,16 +9,18 @@ export default function MarqueeText({ text, children, maxLength = 15, className 
     const [shouldScroll, setShouldScroll] = useState(false);
 
     useEffect(() => {
-        const checkOverflow = () => {
-            if (containerRef.current && textRef.current) {
-                setShouldScroll(textRef.current.scrollWidth > containerRef.current.clientWidth);
-            }
-        };
+        const container = containerRef.current;
+        const text = textRef.current;
+        if (!container || !text) return;
 
-        checkOverflow();
-
-        const observer = new ResizeObserver(() => checkOverflow());
-        if (containerRef.current) observer.observe(containerRef.current);
+        const observer = new ResizeObserver(() => {
+            requestAnimationFrame(() => {
+                if (textRef.current && containerRef.current) {
+                    setShouldScroll(textRef.current.scrollWidth > containerRef.current.clientWidth);
+                }
+            });
+        });
+        observer.observe(container);
 
         return () => observer.disconnect();
     }, [rawText]);

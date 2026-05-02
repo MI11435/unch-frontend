@@ -5,7 +5,19 @@ import { rgbToHsl } from '../../utils/colorUtils';
 export default function AudioVisualizer({ audioRef, isPlaying, dominantColor }) {
   const canvasRef = useRef(null);
   const animationRef = useRef(null);
+  const canvasSizeRef = useRef({ w: 200, h: 60 });
   const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ro = new ResizeObserver((entries) => {
+      const { width, height } = entries[0].contentRect;
+      canvasSizeRef.current = { w: Math.round(width), h: Math.round(height) };
+    });
+    ro.observe(canvas);
+    return () => ro.disconnect();
+  }, []);
 
   useEffect(() => {
     const audio = audioRef?.current || (audioRef instanceof HTMLAudioElement ? audioRef : null);
@@ -48,8 +60,8 @@ export default function AudioVisualizer({ audioRef, isPlaying, dominantColor }) 
 
       analyser.getByteFrequencyData(dataArray);
 
-      canvas.width = canvas.offsetWidth;
-      canvas.height = canvas.offsetHeight;
+      canvas.width = canvasSizeRef.current.w;
+      canvas.height = canvasSizeRef.current.h;
 
       ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
       ctx.fillRect(0, 0, canvas.width, canvas.height);

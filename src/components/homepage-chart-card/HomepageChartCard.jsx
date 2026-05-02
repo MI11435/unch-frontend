@@ -158,23 +158,27 @@ export default memo(function HomepageChartCard({ chart, index = 0 }) {
     const cardRef = useRef(null);
     const authorTimerRef = useRef(null);
 
-    const isMobileDevice = () =>
-        window.matchMedia("(max-width: 768px)").matches || "ontouchstart" in window;
+    const isMobileRef = useRef(false);
+
+    useEffect(() => {
+        const mq = window.matchMedia("(max-width: 768px)");
+        isMobileRef.current = mq.matches || "ontouchstart" in window;
+        const handler = (e) => { isMobileRef.current = e.matches || "ontouchstart" in window; };
+        mq.addEventListener("change", handler);
+        return () => mq.removeEventListener("change", handler);
+    }, []);
 
     const checkPanelSide = useCallback(() => {
         if (!cardRef.current) return;
-        const rect = cardRef.current.getBoundingClientRect();
-        setPanelLeft(window.innerWidth - rect.right < 220);
+        requestAnimationFrame(() => {
+            if (!cardRef.current) return;
+            const rect = cardRef.current.getBoundingClientRect();
+            setPanelLeft(window.innerWidth - rect.right < 220);
+        });
     }, []);
 
-    useEffect(() => {
-        checkPanelSide();
-        window.addEventListener("resize", checkPanelSide);
-        return () => window.removeEventListener("resize", checkPanelSide);
-    }, [checkPanelSide]);
-
-    const handleMouseEnter = () => { if (!isMobileDevice()) { checkPanelSide(); setIsHovered(true); } };
-    const handleMouseLeave = () => { if (!isMobileDevice()) setIsHovered(false); };
+    const handleMouseEnter = () => { if (!isMobileRef.current) { checkPanelSide(); setIsHovered(true); } };
+    const handleMouseLeave = () => { if (!isMobileRef.current) setIsHovered(false); };
     const handleCardClick = (e) => {
         if (e.target.closest("button") || e.target.closest("a")) return;
         if (isMobileDevice()) {

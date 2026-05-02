@@ -4,6 +4,7 @@ import { createPortal } from "react-dom";
 import { Play, Heart, Info, User, Music, Calendar, MessageSquare, ArrowDown } from "lucide-react";
 import Link from "next/link";
 import { useLanguage } from "../../contexts/LanguageContext";
+import { cachedFetch } from "../../utils/fetchCache";
 import MarqueeText from "../marquee-text/MarqueeText";
 import "./HeroSection.css";
 
@@ -125,12 +126,9 @@ export default function HeroSection({ posts = [] }) {
             await Promise.all(posts.map(async (post) => {
                 try {
                     const cleanId = post.id.toString().replace('UnCh-', '');
-                    const res = await fetch(`${apiBase}/api/charts/${cleanId}/comment`);
-                    if (res.ok) {
-                        const data = await res.json();
-                        const list = Array.isArray(data) ? data : (data.data || []);
-                        counts[post.id] = list.length;
-                    }
+                    const data = await cachedFetch(`${apiBase}/api/charts/${cleanId}/comment`);
+                    const list = Array.isArray(data) ? data : (data.data || []);
+                    counts[post.id] = list.length;
                 } catch (e) {
                 }
             }));

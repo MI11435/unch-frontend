@@ -14,6 +14,7 @@ import { useLanguage } from "../contexts/LanguageContext";
 import { useUser } from "../contexts/UserContext";
 import { useSearchParams } from "next/navigation";
 import LiquidSelect from "../components/liquid-select/LiquidSelect";
+import { cachedFetch } from "../utils/fetchCache";
 
 const ViewAllDrawer = dynamic(() => import("../components/view-all-drawer/ViewAllDrawer"), { ssr: false });
 
@@ -119,16 +120,10 @@ function HomeContent() {
   const fetchHomeData = useCallback(async () => {
     setLoading(true);
     try {
-      const [staffPicksRes, trendingRes, newRes] = await Promise.all([
-        fetch(`${APILink}/api/charts?type=advanced&staff_pick=1&limit=10`),
-        fetch(`${APILink}/api/charts?type=advanced&sort_by=decaying_likes&limit=10`),
-        fetch(`${APILink}/api/charts?page=0&type=quick&limit=10`)
-      ]);
-
       const [staffPicksJson, trendingJson, newJson] = await Promise.all([
-        staffPicksRes.json(),
-        trendingRes.json(),
-        newRes.json(),
+        cachedFetch(`${APILink}/api/charts?type=advanced&staff_pick=1&limit=10`),
+        cachedFetch(`${APILink}/api/charts?type=advanced&sort_by=decaying_likes&limit=10`),
+        cachedFetch(`${APILink}/api/charts?page=0&type=quick&limit=10`)
       ]);
 
       const base = staffPicksJson.asset_base_url || trendingJson.asset_base_url || "";
