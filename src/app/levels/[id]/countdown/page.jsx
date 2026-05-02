@@ -220,6 +220,9 @@ export default function CountdownPage({ params, chartStatus }) {
                     <div className="countdown-info">
                         <h1 className="countdown-title">{level.title}</h1>
                         <p className="countdown-artist">{level.artists}</p>
+                        {level.rating !== undefined && (
+                            <span className="countdown-rating">Lv. {level.rating}</span>
+                        )}
 
                         <Link href={`/user/${authorHandle}`} className="countdown-author" style={{ backgroundImage: `url(${authorBannerUrl})` }}>
                             <div className="countdown-author-overlay" />
