@@ -3,14 +3,14 @@
 import { useEffect, useState, useRef, use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Home, ArrowLeft, Clock, Calendar, User } from "lucide-react";
+import { Home, Clock, Calendar } from "lucide-react";
 import { useLanguage } from "../../../../contexts/LanguageContext";
 import "./countdown.css";
 
 export default function CountdownPage({ params }) {
     const { id } = use(params);
     const router = useRouter();
-    const { t } = useLanguage();
+    const { t, locale } = useLanguage();
     const [level, setLevel] = useState(null);
     const [loading, setLoading] = useState(true);
     const [countdown, setCountdown] = useState(null);
@@ -24,29 +24,35 @@ export default function CountdownPage({ params }) {
     useEffect(() => {
         const fetchLevel = async () => {
             try {
-                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/levels/${id}`);
-                if (response.ok) {
-                    const data = await response.json();
-                    setLevel(data);
-                    setAssetBaseUrl(data.asset_base_url || "");
+                const cleanId = id.replace(/^UnCh-/, '');
+                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/charts/${cleanId}/scheduled/`);
+                if (!response.ok) {
+                    router.replace(`/levels/${id}`);
+                    return;
+                }
+                const json = await response.json();
+                const d = json.data;
+                const base = json.asset_base_url || "";
+                setAssetBaseUrl(base);
 
-                    if (data.status !== 'scheduled' || !data.scheduled_publish) {
-                        router.replace(`/levels/${id}`);
-                        return;
-                    }
+                const buildUrl = (hash) => hash && base && d.author ? `${base}/${d.author}/${d.id}/${hash}` : null;
 
-                    if (data.author) {
-                        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/accounts/${data.author}`)
-                            .then(r => r.ok ? r.json() : null)
-                            .then(d => { if (d?.account) setAuthorData(d.account); })
-                            .catch(() => {});
-                    }
-                } else {
-                    router.replace('/');
+                setLevel({
+                    ...d,
+                    thumbnail: buildUrl(d.jacket_file_hash),
+                    backgroundUrl: buildUrl(d.background_file_hash),
+                    backgroundV3Url: buildUrl(d.background_v3_file_hash),
+                });
+
+                if (d.author) {
+                    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/accounts/${d.author}`)
+                        .then(r => r.ok ? r.json() : null)
+                        .then(data => { if (data?.account) setAuthorData(data.account); })
+                        .catch(() => {});
                 }
             } catch (error) {
                 console.error("Error fetching level:", error);
-                router.replace('/');
+                router.replace(`/levels/${id}`);
             } finally {
                 setLoading(false);
             }
@@ -63,11 +69,12 @@ export default function CountdownPage({ params }) {
             const diff = target - now;
 
             if (diff <= 0) {
+                setCountdown({ days: 0, hours: 0, minutes: 0, seconds: 0, total: 0 });
                 setShowConfetti(true);
                 generateConfetti();
                 setTimeout(() => {
-                    router.replace(`/levels/${id}`);
-                }, 3000);
+                    router.refresh();
+                }, 4000);
                 return;
             }
 
@@ -121,8 +128,10 @@ export default function CountdownPage({ params }) {
         setConfettiPieces(pieces);
     };
 
+    const tzAbbr = Intl.DateTimeFormat(undefined, { timeZoneName: 'short' }).formatToParts(new Date()).find(p => p.type === 'timeZoneName')?.value || 'Local';
+
     const formatDate = (dateStr) => {
-        return new Date(dateStr).toLocaleDateString('en-US', {
+        return new Date(dateStr).toLocaleDateString(locale, {
             weekday: 'long',
             year: 'numeric',
             month: 'long',
@@ -151,10 +160,14 @@ export default function CountdownPage({ params }) {
     const isCritical = countdown.total <= 10;
 
     const authorName = authorData?.sonolus_username || level.author_full || level.author;
-    const authorHandle = authorData?.sonolus_handle || level.author;
+    const authorHandle = authorData?.sonolus_handle || level.author_handle || level.author;
+    const authorUid = authorData?.sonolus_id || level.author;
     const authorPfpUrl = (authorData?.profile_hash && assetBaseUrl)
-        ? `${assetBaseUrl}/${authorData.sonolus_id}/profile/${authorData.profile_hash}_webp`
+        ? `${assetBaseUrl}/${authorUid}/profile/${authorData.profile_hash}_webp`
         : "/defpfp.webp";
+    const authorBannerUrl = (authorData?.banner_hash && assetBaseUrl)
+        ? `${assetBaseUrl}/${authorUid}/banner/${authorData.banner_hash}_webp`
+        : "/def.webp";
 
     return (
         <main className="countdown-page">
@@ -162,10 +175,6 @@ export default function CountdownPage({ params }) {
                 <Link href="/" className="nav-btn home-btn">
                     <Home size={18} />
                     <span>{t('countdown.home')}</span>
-                </Link>
-                <Link href={`/levels/${id}`} className="nav-btn back-btn">
-                    <ArrowLeft size={18} />
-                    <span>{t('countdown.backToChart')}</span>
                 </Link>
             </nav>
 
@@ -187,7 +196,7 @@ export default function CountdownPage({ params }) {
             <div
                 className="countdown-bg"
                 style={{
-                    backgroundImage: `url(${level.thumbnail || "/placeholder.png"})`,
+                    backgroundImage: `url(${level.backgroundV3Url || level.backgroundUrl || level.thumbnail || "/def.webp"})`,
                     '--dominant-color': dominantColor || '#38bdf8'
                 }}
             >
@@ -199,7 +208,7 @@ export default function CountdownPage({ params }) {
                     <div className="countdown-jacket-wrapper">
                         <img
                             ref={jacketImgRef}
-                            src={level.thumbnail || "/placeholder.png"}
+                            src={level.thumbnail || "/def.webp"}
                             alt={level.title}
                             className="countdown-jacket"
                         />
@@ -210,19 +219,24 @@ export default function CountdownPage({ params }) {
                         <h1 className="countdown-title">{level.title}</h1>
                         <p className="countdown-artist">{level.artists}</p>
 
-                        <Link href={`/user/${authorHandle}`} className="countdown-author">
+                        <Link href={`/user/${authorHandle}`} className="countdown-author" style={{ backgroundImage: `url(${authorBannerUrl})` }}>
+                            <div className="countdown-author-overlay" />
                             <img
                                 src={authorPfpUrl}
                                 alt={authorName}
                                 className="countdown-author-pfp"
                                 onError={(e) => { e.target.src = '/defpfp.webp'; }}
                             />
-                            <span className="countdown-author-name">{authorName}</span>
+                            <div className="countdown-author-text">
+                                <span className="countdown-author-name">{authorName}</span>
+                                <span className="countdown-author-handle">#{authorHandle}</span>
+                            </div>
                         </Link>
 
                         <div className="countdown-schedule">
                             <Calendar size={16} />
                             <span>{t('countdown.premieres', { 1: formatDate(level.scheduled_publish) })}</span>
+                            <span style={{ fontSize: '0.75rem', color: '#38bdf8', background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 6, padding: '2px 8px', fontWeight: 600, marginLeft: 4 }}>{tzAbbr}</span>
                         </div>
                     </div>
                 </div>
@@ -260,7 +274,7 @@ export default function CountdownPage({ params }) {
                                 <span className="timer-value">{countdown.minutes.toString().padStart(2, '0')}</span>
                                 <span className="timer-label-text">{t('countdown.mins')}</span>
                             </div>
-                            <div className={`timer-unit ${countdown.seconds <= 10 ? 'pulse' : ''}`}>
+                            <div className={`timer-unit ${countdown.total <= 10 ? 'pulse' : ''}`}>
                                 <span className="timer-value">{countdown.seconds.toString().padStart(2, '0')}</span>
                                 <span className="timer-label-text">{t('countdown.secs')}</span>
                             </div>

@@ -4,6 +4,7 @@ import { createContext, useContext, useState, useEffect, useCallback, useMemo, F
 const LanguageContext = createContext({
     t: (key) => key,
     language: 'en',
+    locale: 'en-US',
     changeLanguage: () => { },
     supportedLangs: {},
     loading: false
@@ -17,17 +18,18 @@ function getCachedTranslations(lang) {
 }
 
 export function LanguageProvider({ children }) {
-    const [language, setLanguage] = useState(() => {
-        if (typeof window === 'undefined') return 'en';
-        return localStorage.getItem('language') || 'en';
-    });
-    const [translations, setTranslations] = useState(() => {
-        if (typeof window === 'undefined') return {};
-        const lang = localStorage.getItem('language') || 'en';
-        return getCachedTranslations(lang);
-    });
+    const [language, setLanguage] = useState('en');
+    const [translations, setTranslations] = useState({});
     const [supportedLangs, setSupportedLangs] = useState({});
     const [loading, setLoading] = useState(true);
+    useEffect(() => {
+        const savedLang = localStorage.getItem('language') || 'en';
+        const cached = getCachedTranslations(savedLang);
+        if (Object.keys(cached).length > 0) setTranslations(cached);
+        const cachedEn = getCachedTranslations('en');
+        if (Object.keys(cachedEn).length > 0) setEnTranslations(cachedEn);
+        setLanguage(savedLang);
+    }, []);
 
 
     useEffect(() => {
@@ -74,10 +76,7 @@ export function LanguageProvider({ children }) {
         }
     }, [supportedLangs]);
 
-    const [enTranslations, setEnTranslations] = useState(() => {
-        if (typeof window === 'undefined') return {};
-        return getCachedTranslations('en');
-    });
+    const [enTranslations, setEnTranslations] = useState({});
 
     useEffect(() => {
         if (language !== 'en') {
@@ -136,9 +135,11 @@ export function LanguageProvider({ children }) {
         }).filter(Boolean);
     }, [t]);
 
+    const locale = supportedLangs[language]?.locale || 'en-US';
+
     const contextValue = useMemo(() => ({
-        language, changeLanguage, t, tReact, supportedLangs, loading
-    }), [language, changeLanguage, t, tReact, supportedLangs, loading]);
+        language, locale, changeLanguage, t, tReact, supportedLangs, loading
+    }), [language, locale, changeLanguage, t, tReact, supportedLangs, loading]);
 
     return (
         <LanguageContext.Provider value={contextValue}>

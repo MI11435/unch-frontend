@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useLanguage } from '@/contexts/LanguageContext';
 import './not-found.css';
 
-export default function NotFound() {
+export default function NotFound({ message }) {
     const { t } = useLanguage();
 
     return (
@@ -13,7 +13,7 @@ export default function NotFound() {
                 <h1 className="not-found-code">404</h1>
                 <img src="/error.gif" alt="Error" className="not-found-gif" />
                 <h2 className="not-found-title">{t('error.pageNotFound')}</h2>
-                <p className="not-found-message">{t('error.pageNotFoundMessage')}</p>
+                <p className="not-found-message">{message || t('error.pageNotFoundMessage')}</p>
                 <Link href="/" className="not-found-button">
                     {t('error.goHome')}
                 </Link>

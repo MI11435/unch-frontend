@@ -923,7 +923,10 @@ function DashboardContent() {
                     const scheduledLabel = scheduledEpoch ? new Date(scheduledEpoch * 1000).toLocaleString() : null;
 
                     return (
-                      <div key={post.id} className="chart-card-redesigned">
+                      <div key={post.id} className="chart-card-redesigned" style={{ cursor: 'pointer' }} onClick={(e) => {
+                        if (e.target.closest('button') || e.target.closest('a') || e.target.closest('.action-menu-wrapper') || e.target.closest('.action-dropdown') || e.target.closest('.schedule-input') || e.target.closest('select')) return;
+                        router.push(`/levels/UnCh-${post.id}`);
+                      }}>
                         <div className="card-inner chart-card-inner">
                         <div className="card-bg" style={{ backgroundImage: `url(${post.coverUrl || "/placeholder.png"})` }} />
 
@@ -985,12 +988,14 @@ function DashboardContent() {
                                       <button onClick={() => openEdit(post)}>
                                         <Pencil size={14} style={{ marginRight: "8px" }} /> {t("dashboard.edit", "Edit")}
                                       </button>
-                                      <button onClick={() => {
-                                        setActiveMenu(null);
-                                        openScheduleMenu(post);
-                                      }}>
-                                        <Clock size={14} style={{ marginRight: "8px" }} /> {t("dashboard.schedule", "Schedule")}
-                                      </button>
+                                      {post.status !== "PUBLIC" && (
+                                        <button onClick={() => {
+                                          setActiveMenu(null);
+                                          openScheduleMenu(post);
+                                        }}>
+                                          <Clock size={14} style={{ marginRight: "8px" }} /> {t("dashboard.schedule", "Schedule")}
+                                        </button>
+                                      )}
                                       <button className="text-red" onClick={() => handleDelete(post)}>
                                         <Trash2 size={14} style={{ marginRight: "8px" }} /> {t("dashboard.delete", "Delete")}
                                       </button>
@@ -1056,10 +1061,6 @@ function DashboardContent() {
                                 options={["UNLISTED", "PRIVATE", "PUBLIC"].map((x) => ({ value: x, label: x }))}
                                 onChange={(e) => {
                                   const next = e.target.value;
-                                  if (next === "PUBLIC") {
-                                    openScheduleMenu(post);
-                                    return;
-                                  }
                                   closeScheduleMenu();
                                   updateVisibility(post, next);
                                 }}
@@ -1123,7 +1124,7 @@ function DashboardContent() {
 
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                   <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    <label style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Date</label>
+                    <label style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t("dashboard.date", "Date")}</label>
                     <input
                       type="date"
                       value={schedDate}
@@ -1132,7 +1133,7 @@ function DashboardContent() {
                     />
                   </div>
                   <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    <label style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Time</label>
+                    <label style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t("dashboard.time", "Time")}</label>
                     <input
                       type="time"
                       value={schedTime}

@@ -1,7 +1,8 @@
 'use client';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { createPortal } from 'react-dom';
 import { Heart, MessageSquare, Share2, Copy, ExternalLink, ArrowLeft, User, Music, Play, Pause, Volume2, Star, Download, Eye, EyeOff, ChevronLeft, ChevronRight, Calendar, MoreVertical, Lock, Trash2, Ban, ShieldCheck, UserX, X, Trophy, Info, ChevronDown } from 'lucide-react';
 import WaveformPlayer from '../../../components/waveform-player/WaveformPlayer';
@@ -12,6 +13,7 @@ import MarqueeText from '../../../components/marquee-text/MarqueeText';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { useUser } from '../../../contexts/UserContext';
 import { useAudioPlayer } from '../../../contexts/AudioPlayerContext';
+import NotFound from '../../not-found';
 import "./LevelCard.css";
 
 const DEFAULT_PFP = "/defpfp.webp";
@@ -132,6 +134,8 @@ const StatWithGraph = ({ icon: Icon, label, value, color, data }) => {
 
 export default function LevelCard({ initialLevel, id, SONOLUS_SERVER_URL }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isPreview = searchParams.get('is_preview') === 'true';
   const { t, tReact } = useLanguage();
   const { sonolusUser, session } = useUser();
   const sonolusServerUrl = SONOLUS_SERVER_URL;
@@ -319,7 +323,8 @@ export default function LevelCard({ initialLevel, id, SONOLUS_SERVER_URL }) {
           }
 
           const cleanId = id.replace(/^UnCh-/, '');
-          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/charts/${cleanId}/`, { headers });
+          const previewParam = isPreview ? '?is_preview=true' : '';
+          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/charts/${cleanId}/${previewParam}`, { headers });
 
           if (response.ok) {
             const json = await response.json();
@@ -421,16 +426,8 @@ export default function LevelCard({ initialLevel, id, SONOLUS_SERVER_URL }) {
     id: null,
   } : null);
 
-  if (loading && !effectiveLevel) return (<div className="level-loading"><div className="loading-spinner"></div></div>);
-  if (error || !effectiveLevel) return (
-    <div className="level-error-container" style={{ padding: '40px', textAlign: 'center', color: 'white' }}>
-      <h1>{t('common.error', 'Error')}</h1>
-      <p>{t('errors.levelNotFound', 'Level not found or you do not have permission to view it.')}</p>
-      <Link href="/" className="back-btn" style={{ display: 'inline-block', marginTop: '20px' }}>
-        {t('levelDetail.back', 'Back')}
-      </Link>
-    </div>
-  );
+  if (loading && !effectiveLevel) return (<div className="level-loading" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 'calc(100dvh - 300px)' }}><div className="loading-spinner"></div></div>);
+  if (error || !effectiveLevel) return <NotFound message={t('error.chartNotFound')} />;
 
   const level = effectiveLevel;
 
@@ -933,6 +930,21 @@ export default function LevelCard({ initialLevel, id, SONOLUS_SERVER_URL }) {
                 <Share2 size={18} />
                 {t('levelDetail.share')}
               </button>
+              {levelData.status !== 'PUBLIC' && !isPreview && (() => {
+                const isOwner = sonolusUser?.sonolus_id === levelData.authorId;
+                const isMod = sonolusUser?.isAdmin || sonolusUser?.isMod;
+                const canPreview = levelData.status === 'UNLISTED' || isOwner || isMod;
+                if (!canPreview) return null;
+                return (
+                  <button
+                    onClick={() => router.push(`/levels/${id}?is_preview=true`)}
+                    className="action-btn"
+                  >
+                    <Eye size={18} />
+                    {t('levelDetail.previewChartPage', 'Preview Chart Page')}
+                  </button>
+                );
+              })()}
             </div>
           </div>
         </div>

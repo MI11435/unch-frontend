@@ -1,5 +1,5 @@
 import LevelCard from './LevelCard';
-import { notFound } from 'next/navigation';
+import CountdownPage from './countdown/page';
 
 const APILink = process.env.NEXT_PUBLIC_API_URL;
 const SONOLUS_SERVER_URL = process.env.NEXT_PUBLIC_SONOLUS_SERVER_URL;
@@ -41,10 +41,16 @@ async function fetchLevel(rawId) {
     backgroundUrl: buildAssetUrl(data.background_file_hash || (data.background && data.background.hash)),
     backgroundV3Url: buildAssetUrl(data.background_v3_file_hash || (data.backgroundV3 && data.backgroundV3.hash)),
 
-    
     scheduled_publish: data.scheduled_publish || null,
     status: data.status || 'PUBLIC',
   };
+}
+
+async function fetchScheduled(rawId) {
+  const cleanId = rawId.replace(/^UnCh-/, '');
+  const res = await fetch(`${APILink}/api/charts/${cleanId}/scheduled/`);
+  if (!res.ok) return null;
+  return res.json();
 }
 
 
@@ -58,9 +64,21 @@ export async function generateMetadata({ params }) {
     return { title: 'Level not found' };
   }
 
+  if (!level) {
+    const scheduled = await fetchScheduled(id);
+    if (scheduled?.data) {
+      const d = scheduled.data;
+      return {
+        title: `${d.title} - ${d.artists}`,
+        openGraph: { title: d.title, siteName: 'UntitledCharts' },
+        other: { 'theme-color': '#38bdf8' },
+      };
+    }
+    return { title: 'Level not found' };
+  }
+
   const authorName = level.author || 'Unknown';
 
-  
   const formatDate = (dateStr) => {
     if (!dateStr) return '';
     const d = new Date(dateStr);
@@ -109,12 +127,15 @@ export default async function LevelPage({ params }) {
   let level = null;
   try {
     level = await fetchLevel(id);
-  } catch {
-    
-  }
+  } catch {}
 
-  if (level === null) {
-    
+  const shouldCheckSchedule = !level || level.status !== 'PUBLIC';
+
+  if (shouldCheckSchedule) {
+    const scheduled = await fetchScheduled(id);
+    if (scheduled?.data) {
+      return <CountdownPage params={params} />;
+    }
   }
 
   return <LevelCard initialLevel={level} id={id} SONOLUS_SERVER_URL={SONOLUS_SERVER_URL} />;

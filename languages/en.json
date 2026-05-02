@@ -192,7 +192,8 @@
     "somethingWentWrong": "Something Went Wrong",
     "errorMessage": "An unexpected error occurred. Please try again.",
     "tryAgain": "Try Again",
-    "goHome": "Go Home"
+    "goHome": "Go Home",
+    "chartNotFound": "The chart you're looking for could not be found. You may need to login to view it."
   },
   "common": {
     "brandName": "UntitledCharts",
@@ -272,7 +273,10 @@
     "schedulePublish": "Schedule publish",
     "confirm": "Confirm",
     "removeSchedule": "Remove scheduled publish",
-    "scheduledFor": "Scheduled for {1}"
+    "scheduledFor": "Scheduled for {1}",
+    "schedule": "Schedule",
+    "date": "Date",
+    "time": "Time"
   },
   "header": {
     "language": "Language",
