@@ -1,28 +1,28 @@
 ﻿"use client";
-import { useEffect, useState, useRef, Suspense, useCallback } from "react";
+import { useEffect, useState, Suspense, useCallback } from "react";
 import Link from "next/link";
-import { Loader2, TrendingUp, Sparkles, Zap, Shuffle, PlayCircle, Settings, Clock, Star, Heart, Type, ArrowUp, ArrowDown, User } from "lucide-react";
+import dynamic from "next/dynamic";
+import { Zap, Shuffle, PlayCircle, Settings, Clock, Star, Heart, Type, ArrowUp, ArrowDown, User } from "lucide-react";
 import ChartsList from "../components/charts-list/ChartsList";
 import PaginationControls from "../components/pagination-controls/PaginationControls";
-import HeroSection from "../components/hero-section/HeroSection";
-import TrendingCarousel from "../components/trending-carousel/TrendingCarousel";
 import "../components/trending-carousel/TrendingCarousel.css";
-import HomepageChartCard from "../components/homepage-chart-card/HomepageChartCard";
 import "./page.css";
 import { useLanguage } from "../contexts/LanguageContext";
 import { useUser } from "../contexts/UserContext";
-import { useRouter, useSearchParams } from "next/navigation";
-import ViewAllDrawer from "../components/view-all-drawer/ViewAllDrawer";
+import { useSearchParams } from "next/navigation";
+import LiquidSelect from "../components/liquid-select/LiquidSelect";
+
+const HeroSection = dynamic(() => import("../components/hero-section/HeroSection"), { ssr: false });
+const TrendingCarousel = dynamic(() => import("../components/trending-carousel/TrendingCarousel"));
+const HomepageChartCard = dynamic(() => import("../components/homepage-chart-card/HomepageChartCard"));
+const ViewAllDrawer = dynamic(() => import("../components/view-all-drawer/ViewAllDrawer"), { ssr: false });
 
 const APILink = process.env.NEXT_PUBLIC_API_URL;
-
-import LiquidSelect from "../components/liquid-select/LiquidSelect";
 
 function HomeContent() {
   const { t } = useLanguage();
   const { sonolusUser } = useUser();
   const searchParams = useSearchParams();
-  const router = useRouter();
 
   const [viewMode, setViewMode] = useState("home");
 
@@ -310,16 +310,15 @@ function HomeContent() {
 
                 {searchType !== "random" && searchType !== "newest" && (
                   <>
-                    <div className="search-control-group" style={{ flexDirection: 'row', alignItems: 'center', minWidth: 'auto', flex: 'none', paddingBottom: '12px', gap: '8px' }}>
+                    <div className="search-control-group checkbox-group">
                       <input
                         type="checkbox"
                         id="staffPick"
                         checked={staffPick}
                         onChange={(e) => setStaffPick(e.target.checked)}
-                        className="accent-sky-500"
-                        style={{ width: '18px', height: '18px', margin: 0, cursor: 'pointer' }}
+                        className="styled-checkbox"
                       />
-                      <label htmlFor="staffPick" style={{ margin: 0, fontSize: '0.9rem', color: 'rgba(255,255,255,0.9)', cursor: 'pointer' }}>{t('search.staffPickOnly')}</label>
+                      <label htmlFor="staffPick" className="checkbox-label">{t('search.staffPickOnly')}</label>
                     </div>
 
                     <div className="search-control-group">
@@ -394,10 +393,12 @@ function HomeContent() {
                       <label>{t('search.authorHandle', 'Author Handle')}</label>
                       <input type="text" placeholder={t('search.authorHandlePlaceholder', 'e.g. 78302')} value={sonolusHandleIs} onChange={(e) => setSonolusHandleIs(e.target.value)} className="liquid-input" />
                     </div>
-                    <div className="search-control-group" style={{ flexDirection: 'row', alignItems: 'center', minWidth: 'auto', flex: 'none', paddingBottom: '12px' }}>
-                      <input type="checkbox" id="likedByMe" checked={likedBy} onChange={(e) => setLikedBy(e.target.checked)} className="accent-sky-500" style={{ width: '18px', height: '18px', margin: 0, cursor: 'pointer' }} />
-                      <label htmlFor="likedByMe" style={{ margin: 0, fontSize: '0.9rem', color: 'rgba(255,255,255,0.9)', cursor: 'pointer' }}>{t('search.likedByMe', 'Liked by me')}</label>
+                    {sonolusUser && (
+                    <div className="search-control-group checkbox-group">
+                      <input type="checkbox" id="likedByMe" checked={likedBy} onChange={(e) => setLikedBy(e.target.checked)} className="styled-checkbox" />
+                      <label htmlFor="likedByMe" className="checkbox-label">{t('search.likedByMe', 'Liked by me')}</label>
                     </div>
+                    )}
                   </>
                 )}
 
