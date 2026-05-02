@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Loader2 } from "lucide-react";
 import "./LoadingImage.css";
 
@@ -36,12 +36,20 @@ export default function LoadingImage({
 }) {
     const [isLoaded, setIsLoaded] = useState(false);
     const [hasError, setHasError] = useState(false);
+    const imgRef = useRef(null);
     const skipLoader = isLocalImage(src);
 
     useEffect(() => {
         setIsLoaded(false);
         setHasError(false);
     }, [src]);
+
+    useEffect(() => {
+        const img = imgRef.current;
+        if (img?.complete && img.naturalWidth > 0) {
+            setIsLoaded(true);
+        }
+    });
 
     const handleLoad = () => {
         setIsLoaded(true);
@@ -71,6 +79,7 @@ export default function LoadingImage({
                 <Loader2 size={24} />
             </div>
             <img
+                ref={imgRef}
                 src={src}
                 alt={alt}
                 className={`${className} ${isLoaded ? 'loaded' : ''}`}
