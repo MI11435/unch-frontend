@@ -4,13 +4,15 @@ import { notFound } from 'next/navigation';
 const APILink = process.env.NEXT_PUBLIC_API_URL;
 const SONOLUS_SERVER_URL = process.env.NEXT_PUBLIC_SONOLUS_SERVER_URL;
 
-// Fetch level data from API
+
 async function fetchLevel(rawId) {
   const cleanId = rawId.replace(/^UnCh-/, '');
   const res = await fetch(`${APILink}/api/charts/${cleanId}/`);
+  if (res.status === 404 || res.status === 403) return null;
   if (!res.ok) throw new Error(`API returned ${res.status}`);
   const json = await res.json();
   const data = json.data;
+  if (data.status === 'PRIVATE') return null;
   const base = json.asset_base_url;
 
   const buildAssetUrl = (hash) =>
@@ -18,16 +20,34 @@ async function fetchLevel(rawId) {
 
   return {
     id: data.id,
+    sonolusId: rawId,
     title: data.title || 'Untitled Level',
     description: data.description || 'No description provided.',
     thumbnail: buildAssetUrl(data.jacket_file_hash),
+    authorId: data.author,
+    authorHandle: data.author_handle || data.author,
     author: data.author_full || data.author || 'Unknown',
+    artists: data.artists || 'Unknown Artist',
     rating: data.rating || 0,
+    likes: data.likes || data.like_count || 0,
+    comments: Number.isInteger(data.comments_count) ? data.comments_count : (Number.isInteger(data.comment_count) ? data.comment_count : (Array.isArray(data.comments) ? data.comments.length : 0)),
+    createdAt: data.created_at || data.createdAt,
     asset_base_url: base,
+
+    music_hash: data.music_file_hash || (data.music && data.music.hash),
+    background_file_hash: data.background_file_hash || (data.background && data.background.hash),
+    background_v3_file_hash: data.background_v3_file_hash || (data.backgroundV3 && data.backgroundV3.hash),
+
+    backgroundUrl: buildAssetUrl(data.background_file_hash || (data.background && data.background.hash)),
+    backgroundV3Url: buildAssetUrl(data.background_v3_file_hash || (data.backgroundV3 && data.backgroundV3.hash)),
+
+    
+    scheduled_publish: data.scheduled_publish || null,
+    status: data.status || 'PUBLIC',
   };
 }
 
-// Server-side metadata generation
+
 export async function generateMetadata({ params }) {
   const { id } = await params;
 
@@ -38,37 +58,64 @@ export async function generateMetadata({ params }) {
     return { title: 'Level not found' };
   }
 
-  const ogDescription = level.description;
-  const twitterText = `Play ${level.title} now on UntitledCharts!\nLevel ${level.rating} charted by ${level.author}`;
+  const authorName = level.author || 'Unknown';
+
+  
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    return d.toLocaleString('en-US', {
+      month: 'numeric',
+      day: 'numeric',
+      year: '2-digit',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
+  };
+  const publishedDate = formatDate(level.createdAt);
+
+  const rawDescription = level.description || '';
+  const cleanDescription = rawDescription.replace(/:[a-zA-Z0-9_]+:/g, '').trim();
+  const descriptionText = cleanDescription.slice(0, 300) || 'No description provided.';
 
   return {
-    title: `[${level.rating}] ${level.title}`,
-    description: ogDescription,
+    title: `[Lv. ${level.rating}] ${level.title} - ${level.artists}`,
+    description: descriptionText,
     openGraph: {
-      title: `[${level.rating}] ${level.title}`,
-      description: ogDescription,
-      site_name: `UntitledCharts - ${level.author}`,
-      images: level.thumbnail ? [{ url: level.thumbnail, width: 50, height: 50  }] : [],
+      title: `${level.title}`,
+      description: descriptionText,
+      siteName: `UntitledCharts${publishedDate ? ` - ${publishedDate}` : ''}`,
+      type: 'article',
+      publishedTime: level.createdAt,
+      authors: [authorName],
     },
     twitter: {
       card: 'summary_large_image',
-      title: `[${level.rating}] ${level.title}`,
-      description: twitterText,
-      images: level.thumbnail ? [level.thumbnail] : [],
+      title: `[Lv. ${level.rating}] ${level.title}`,
+      description: descriptionText,
+      creator: `@${authorName}`,
+    },
+    other: {
+      'theme-color': '#38bdf8',
     },
   };
 }
 
-// Server-side page component
+
 export default async function LevelPage({ params }) {
   const { id } = await params;
 
-  let level;
+  let level = null;
   try {
     level = await fetchLevel(id);
   } catch {
-    notFound();
+    
   }
 
-  return <LevelCard level={level} SONOLUS_SERVER_URL={SONOLUS_SERVER_URL} />;
+  if (level === null) {
+    
+  }
+
+  return <LevelCard initialLevel={level} id={id} SONOLUS_SERVER_URL={SONOLUS_SERVER_URL} />;
 }

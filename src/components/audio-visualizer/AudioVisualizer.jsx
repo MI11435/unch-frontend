@@ -1,18 +1,19 @@
 import { useState, useRef, useEffect } from 'react';
 import './AudioVisualizer.css';
+import { rgbToHsl } from '../../utils/colorUtils';
 
-export default function AudioVisualizer({ audioRef, isPlaying }) {
+export default function AudioVisualizer({ audioRef, isPlaying, dominantColor }) {
   const canvasRef = useRef(null);
   const animationRef = useRef(null);
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    if (!audioRef?.current || !canvasRef.current) return;
+    const audio = audioRef?.current || (audioRef instanceof HTMLAudioElement ? audioRef : null);
+    if (!audio || !canvasRef.current) return;
 
-    const audio = audioRef.current;
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
-    
+
     let audioContext;
     let analyser;
     let dataArray;
@@ -23,14 +24,14 @@ export default function AudioVisualizer({ audioRef, isPlaying }) {
         audioContext = new (window.AudioContext || window.webkitAudioContext)();
         analyser = audioContext.createAnalyser();
         source = audioContext.createMediaElementSource(audio);
-        
+
         source.connect(analyser);
         analyser.connect(audioContext.destination);
-        
+
         analyser.fftSize = 256;
         const bufferLength = analyser.frequencyBinCount;
         dataArray = new Uint8Array(bufferLength);
-        
+
         setIsVisible(true);
         draw();
       } catch (error) {
@@ -46,31 +47,56 @@ export default function AudioVisualizer({ audioRef, isPlaying }) {
       }
 
       analyser.getByteFrequencyData(dataArray);
-      
+
       canvas.width = canvas.offsetWidth;
       canvas.height = canvas.offsetHeight;
-      
+
       ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
-      
+
       const barWidth = (canvas.width / dataArray.length) * 2.5;
       let barHeight;
       let x = 0;
-      
+
       for (let i = 0; i < dataArray.length; i++) {
         barHeight = (dataArray[i] / 255) * canvas.height * 0.8;
+
         
+        let colorBase, colorMid, colorTop;
+        if (dominantColor) {
+          const hsl = rgbToHsl(dominantColor.r, dominantColor.g, dominantColor.b);
+          colorBase = `hsl(${hsl.h}, ${Math.min(hsl.s + 20, 100)}%, ${Math.min(hsl.l + 10, 60)}%)`;
+          colorMid = `hsl(${(hsl.h + 30) % 360}, ${hsl.s}%, ${Math.min(hsl.l + 20, 70)}%)`;
+          colorTop = `hsl(${(hsl.h + 60) % 360}, ${Math.min(hsl.s + 10, 90)}%, ${Math.min(hsl.l + 30, 80)}%)`;
+        } else {
+          colorBase = '#4A90E2';
+          colorMid = '#7B68EE';
+          colorTop = '#FF6B6B';
+        }
+
         const gradient = ctx.createLinearGradient(0, canvas.height, 0, canvas.height - barHeight);
-        gradient.addColorStop(0, '#4A90E2');
-        gradient.addColorStop(0.5, '#7B68EE');
-        gradient.addColorStop(1, '#FF6B6B');
+        gradient.addColorStop(0, colorBase);
+        gradient.addColorStop(0.5, colorMid);
+        gradient.addColorStop(1, colorTop);
+
         
+        if (barHeight > canvas.height * 0.4) {
+          ctx.shadowBlur = 15;
+          ctx.shadowColor = colorMid;
+        } else {
+          ctx.shadowBlur = 5;
+          ctx.shadowColor = colorBase;
+        }
+
         ctx.fillStyle = gradient;
         ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
-        
+
         x += barWidth + 1;
       }
+
       
+      ctx.shadowBlur = 0;
+
       animationRef.current = requestAnimationFrame(draw);
     };
 

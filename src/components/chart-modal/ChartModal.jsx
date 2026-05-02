@@ -1,355 +1,751 @@
 "use client";
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
+import { createPortal } from "react-dom";
+import { Trash2, Upload, X as XIcon, Image as ImageIcon, Music, FileText, Loader2, Play, Pause, Square, Calendar, CheckCircle as CheckCircleIcon, Globe, Link as LinkIcon, Lock, Clock } from "lucide-react";
 import "./ChartModal.css";
+import { useLanguage } from "../../contexts/LanguageContext";
 import AudioControls from "../audio-control/AudioControls";
 import AudioVisualizer from "../audio-visualizer/AudioVisualizer";
+import LiquidSelect from "../liquid-select/LiquidSelect";
+import { formatBytes } from "../../utils/byteUtils";
+import FormattedText from "../formatted-text/FormattedText";
+import EmojiSuggestion from "../emoji-suggestion/EmojiSuggestion";
 
-export default function ChartModal({ 
-  isOpen, 
-  mode, 
-  form, 
-  onClose, 
-  onSubmit, 
+
+const validateLevelValue = (val) => {
+  if (val === '' || val === '-') return val;
+  const num = parseInt(val, 10);
+  if (isNaN(num)) return '';
+  return Math.max(-999, Math.min(999, num)).toString();
+};
+
+const ModalInput = ({ id, label, value, onChange, maxLength, placeholder, required = false, type = "text", inputMode, min = undefined, max = undefined, ...props }) => (
+  <div className="form-group">
+    <div className="label-row">
+      <label htmlFor={id}>{label}</label>
+      {maxLength && (
+        <span className={`char - count ${value?.length >= maxLength ? 'limit-reached' : ''} `}>
+          {value?.length || 0}/{maxLength}
+        </span>
+      )}
+    </div>
+    <input
+      id={id}
+      type={type}
+      value={value}
+      onChange={onChange}
+      maxLength={maxLength}
+      placeholder={placeholder}
+      required={required}
+      inputMode={inputMode}
+      min={min}
+      max={max}
+      {...props}
+    />
+  </div>
+);
+
+const ModalTextarea = ({ id, label, value, onChange, maxLength, placeholder }) => (
+  <div className="form-group">
+    <div className="label-row">
+      <label htmlFor={id}>{label}</label>
+      {maxLength && (
+        <span className={`char - count ${value?.length >= maxLength ? 'limit-reached' : ''} `}>
+          {value?.length || 0}/{maxLength}
+        </span>
+      )}
+    </div>
+    <textarea
+      id={id}
+      value={value}
+      onChange={onChange}
+      rows="12"
+      maxLength={maxLength}
+      placeholder={placeholder}
+      style={{ minHeight: '220px', resize: 'vertical' }}
+    />
+  </div>
+);
+
+const FilePreview = ({ file, type }) => {
+  const [url, setUrl] = useState(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const audioRef = useRef(null);
+
+  useEffect(() => {
+    if (!file) {
+      setUrl(null);
+      return;
+    }
+    const objectUrl = URL.createObjectURL(file);
+    setUrl(objectUrl);
+    return () => {
+      URL.revokeObjectURL(objectUrl);
+      
+      setIsPlaying(false);
+    };
+  }, [file]);
+
+  if (!url) return null;
+
+  if (type === 'image') {
+    return (
+      <div className="preview-container">
+        <img src={url} alt="Preview" className="preview-image" style={{ marginTop: '8px', maxWidth: '100%', maxHeight: '200px', borderRadius: '8px' }} />
+      </div>
+    );
+  }
+
+  if (type === 'audio') {
+    return (
+      <div className="audio-preview-container" style={{ width: '100%', marginTop: '8px' }}>
+        <AudioControls
+          bgmUrl={url}
+          onPlay={() => setIsPlaying(true)}
+          onStop={() => setIsPlaying(false)}
+          isPlaying={isPlaying}
+          isActive={isPlaying}
+          audioRef={(ref) => { audioRef.current = ref; }}
+        />
+        {isPlaying && audioRef.current && (
+          <AudioVisualizer
+            audioRef={audioRef.current}
+            isPlaying={isPlaying}
+          />
+        )}
+      </div>
+    );
+  }
+  return null;
+};
+
+export default function ChartModal({
+  isOpen,
+  mode,
+  form,
+  onClose,
+  onSubmit,
   onUpdate,
   loading = false,
-  editData = null
+  editData = null,
+  limits = null
 }) {
-  // Audio state for edit mode previews
+  const { t, loading: langLoading } = useLanguage();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
+
+  const checkFileLimit = (limit, callback) => (e) => {
+    if (e.target.files && e.target.files[0]) {
+      if (e.target.files[0].size > limit) {
+        alert(t('modal.fileTooLarge', `File size exceeds the limit of ${formatBytes(limit)}`));
+        e.target.value = "";
+        return;
+      }
+      callback(e);
+    }
+  };
+
+  const visibilityOptions = [
+    { value: "public", label: "Public", icon: Globe },
+    { value: "unlisted", label: "Unlisted", icon: LinkIcon },
+    { value: "private", label: "Private", icon: Lock }
+  ];
+
   const [currentlyPlaying, setCurrentlyPlaying] = useState(null);
   const audioRefs = useRef({});
 
-  const handlePlay = (audioId) => {
-    // Stop any currently playing audio
-    if (currentlyPlaying && currentlyPlaying !== audioId) {
-      const currentAudio = audioRefs.current[currentlyPlaying];
-      if (currentAudio) {
-        currentAudio.pause();
-        currentAudio.currentTime = 0;
+  
+  const descriptionEditRef = useRef(null);
+  const descriptionUpRef = useRef(null);
+  const [emojiOpenEdit, setEmojiOpenEdit] = useState(false);
+  const [emojiOpenUp, setEmojiOpenUp] = useState(false);
+
+  const handlePlay = (id) => {
+    Object.keys(audioRefs.current).forEach(key => {
+      if (key !== id && audioRefs.current[key]) {
+        audioRefs.current[key].pause();
+        audioRefs.current[key].currentTime = 0;
       }
+    });
+
+    if (audioRefs.current[id]) {
+      audioRefs.current[id].play();
+      setCurrentlyPlaying(id);
     }
-    setCurrentlyPlaying(audioId);
   };
 
-  const handleStop = (audioId) => {
-    setCurrentlyPlaying(null);
+  const handleStop = (id) => {
+    if (audioRefs.current[id]) {
+      audioRefs.current[id].pause();
+      audioRefs.current[id].currentTime = 0;
+    }
+    if (currentlyPlaying === id) {
+      setCurrentlyPlaying(null);
+    }
   };
 
-  const handleAudioRef = (audioId, ref) => {
-    audioRefs.current[audioId] = ref;
+  const handleAudioRef = (id, ref) => {
+    audioRefs.current[id] = ref;
   };
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
-  return (
-    <div className="modal-overlay">
-      <div className="edit-container">
+  return createPortal(
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="edit-container" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <strong>
-            {mode === "edit" 
-              ? (editData && editData.title ? `Edit: ${editData.title}` : "Edit Chart") 
-              : "Upload New Level"
-            }
-          </strong>
-          <button type="button" onClick={onClose} aria-label="Close" className="close-btn">✕</button>
+          <strong>{mode === 'upload' ? t('modal.upload', 'Upload Chart') : t('modal.edit', 'Edit Chart')}</strong>
+          <button className="close-btn" onClick={onClose}>
+            <XIcon size={20} />
+          </button>
         </div>
+
         <div className="modal-content">
           <div className="meta-form" hidden={mode !== "edit"}>
             <form onSubmit={onSubmit}>
-              <label className="label-title" htmlFor="title">Song title (max 50 chars):</label>
-              <input 
-                id="title" 
-                className="input-title" 
-                type="text" 
-                value={form.title} 
-                onChange={onUpdate("title")} 
-                maxLength={50}
+              <ModalInput id="title_edit" label={`${t('modal.songTitle', 'Song Title')} * `} value={form.title} onChange={onUpdate("title")} maxLength={limits?.text?.title || 50} placeholder="e.g. Bad Apple!!" required />
+              <ModalInput id="artists_edit" label={`${t('modal.artists', 'Artist(s)')} * `} value={form.artists} onChange={onUpdate("artists")} maxLength={limits?.text?.artist || 50} placeholder="e.g. Alstroemeria Records" required />
+              <ModalInput id="author_edit" label={`${t('modal.charter', 'Charter Name')} * `} value={form.author} onChange={onUpdate("author")} maxLength={limits?.text?.author || 50} placeholder="Your username" required />
+
+              <ModalInput
+                id="rating_edit"
+                label={`${t('modal.level', 'Level')} * `}
+                value={form.rating}
+                onChange={(e) => {
+                  let val = e.target.value;
+                  if (val.length > 3) val = val.slice(0, 3);
+                  onUpdate("rating")(val)
+                }}
+                placeholder="e.g. 28"
+                required type="number"
+                inputMode="numeric"
+                onWheel={(e) => e.target.blur()}
               />
 
-              <label className="label-artist" htmlFor="artists">Artist(s) (max 50 chars):</label>
-              <input 
-                id="artists" 
-                className="input-artist" 
-                type="text" 
-                value={form.artists} 
-                onChange={onUpdate("artists")} 
-                maxLength={50}
-              />
+              <div className="relative">
+                <ModalTextarea
+                  id="description_edit"
+                  label={t('modal.description', 'Description (Optional)')}
+                  value={form.description}
+                  onChange={onUpdate("description")}
+                  maxLength={limits?.text?.description || 1000}
+                  placeholder="Any comments or details..."
+                  ref={descriptionEditRef}
+                />
+                <EmojiSuggestion
+                  value={form.description}
+                  textareaRef={descriptionEditRef}
+                  onSelect={(newVal) => onUpdate("description")(newVal)}
+                  isOpen={emojiOpenEdit}
+                  setIsOpen={setEmojiOpenEdit}
+                />
+              </div>
 
-              <label className="label-charter" htmlFor="author">Charter Name (max 50 chars):</label>
-              <input 
-                id="author" 
-                className="input-charter" 
-                type="text"
-                value={form.author} 
-                onChange={onUpdate("author")} 
-                maxLength={50}
-              />
+              <ModalInput id="tags_edit" label={t('modal.tags', 'Tags')} value={form.tags} onChange={onUpdate("tags")} placeholder="e.g. Touhou, Vocaloid" />
 
-              <label className="label-rating" htmlFor="rating">Lv:</label>
-              <input 
-                id="rating" 
-                className="input-rating" 
-                type="number" 
-                inputMode="numeric" 
-                max={999}
-                min={-999}
-                value={form.rating} 
-                onChange={onUpdate("rating")} 
-              />
-
-              <label className="label-description" htmlFor="description">Description (max 1000 chars):</label>
-              <textarea 
-                id="description" 
-                className="input-description" 
-                value={form.description} 
-                onChange={onUpdate("description")} 
-                rows="7"
-                maxLength={1000}
-              />
-
-              <label className="label-tags" htmlFor="tags">Tags (max 3 tags, 10 chars each):</label>
-              <input 
-                id="tags" 
-                className="input-tags" 
-                type="text" 
-                value={form.tags} 
-                onChange={onUpdate("tags")} 
-                placeholder="tag1, tag2, tag3"
-              />
-
-              <label className="label-jacket" htmlFor="jacket">Cover Image (png):</label>
-              <input 
-                id="jacket" 
-                className="input-jacket" 
-                type="file" 
-                accept="image/png" 
-                onChange={onUpdate("jacket")} 
-              />
-              {editData && editData.jacketUrl && !form.jacket && (
-                <div className="file-preview">
-                  <img src={editData.jacketUrl} alt="Current jacket" style={{maxWidth: '100px', maxHeight: '100px'}} />
-                  <span>Current: {editData.jacketUrl.split('/').pop()}</span>
+              <div className="form-group">
+                <label htmlFor="visibility_edit">{t('modal.visibility', 'Visibility')}</label>
+                <div className="flex flex-col gap-2">
+                  <LiquidSelect
+                    value={form.visibility || "public"}
+                    onChange={(e) => onUpdate("visibility")(e)}
+                    options={visibilityOptions}
+                  />
                 </div>
-              )}
+              </div>
 
-              <label className="label-bgm" htmlFor="bgm">Audio:</label>
-              <input 
-                id="bgm" 
-                className="input-bgm" 
-                type="file" 
-                accept="audio/mp3, audio/mpeg"  
-                onChange={onUpdate("bgm")} 
-              />
-              {editData && editData.bgmUrl && !form.bgm && (
-                <div className="file-preview">
-                  <span>Current: {editData.bgmUrl.split('/').pop()}</span>
-                  <div className="audio-preview-container">
-                    <AudioControls
-                      bgmUrl={editData.bgmUrl}
-                      onPlay={() => handlePlay('edit-bgm')}
-                      onStop={() => handleStop('edit-bgm')}
-                      isPlaying={currentlyPlaying === 'edit-bgm'}
-                      isActive={currentlyPlaying === 'edit-bgm'}
-                      audioRef={(ref) => handleAudioRef('edit-bgm', ref)}
-                    />
-                    {currentlyPlaying === 'edit-bgm' && (
-                      <AudioVisualizer
-                        audioRef={audioRefs.current['edit-bgm']}
+
+
+
+
+              <div className="form-group file-section">
+                <label htmlFor="jacket_edit">{t('modal.coverImage', 'Cover Image')} (.png/.jpg, max {limits?.files?.jacket ? formatBytes(limits.files.jacket) : '5MB'})</label>
+                <div className="flex gap-1">
+                  <input
+                    id="jacket_edit"
+                    type="file"
+                    accept="image/png, image/jpeg"
+                    onChange={checkFileLimit(limits?.files?.jacket || 5 * 1024 * 1024, (e) => {
+                      onUpdate("jacket")(e);
+                      onUpdate("removeJacket")(false);
+                    })}
+                  />
+                  {!form.jacket && editData && editData.jacketUrl && !form.removeJacket && (
+                    <div
+                      className="aspect-square h-24 border-2 flex items-center justify-center p-3 rounded-xl border-dashed gap-1 text-sm font-bold cursor-pointer transition-all border-red-300/30 bg-red-200/10 hover:border-red-100/80 hover:bg-red-200/15"
+                      onClick={() => onUpdate("removeJacket")(true)}
+                    >
+                      <XIcon className="size-4" />
+                      Remove Existing
+                    </div>
+                  )}
+                  {form.removeJacket && (
+                    <div className="text-red-500 font-bold text-sm my-2 flex items-center gap-2">
+                      <XIcon size={14} /> Existing cover will be removed
+                      <button type="button" onClick={() => onUpdate("removeJacket")(false)} className="text-blue-500 underline text-xs">Undo</button>
+                    </div>
+                  )}
+                </div>
+                {form.jacket && (
+                  <div className="file-preview selected">
+                    <div className="file-info-row">
+                      <span>{t('modal.selected', { name: form.jacket.name })}</span>
+                      <button type="button" onClick={() => onUpdate("jacket")(null)} className="remove-preview-btn">
+                        <XIcon size={14} /> {t('modal.remove', 'Remove')}
+                      </button>
+                    </div>
+                    <FilePreview file={form.jacket} type="image" />
+                  </div>
+                )}
+                {editData && editData.jacketUrl && !form.jacket && !form.removeJacket && (
+                  <div className="file-preview">
+                    <div className="file-info-row">
+                      <span>{t('modal.current', { name: editData.jacketUrl.split('/').pop() })}</span>
+                    </div>
+                    <img src={editData.jacketUrl} alt="Current jacket" />
+                  </div>
+                )}
+              </div>
+
+              <div className="form-group file-section">
+                <label htmlFor="bgm_edit">{t('modal.audio', 'Audio')} (max {limits?.files?.audio ? formatBytes(limits.files.audio) : '50 MB'})</label>
+                <div className="flex gap-1">
+                  <input
+                    id="bgm_edit"
+                    type="file"
+                    accept="audio/mp3, audio/mpeg"
+                    onChange={checkFileLimit(limits?.files?.audio || 20 * 1024 * 1024, (e) => {
+                      onUpdate("bgm")(e);
+                      onUpdate("removeAudio")(false);
+                    })}
+                  />
+                  {!form.bgm && editData && editData.bgmUrl && !form.removeAudio && (
+                    <div
+                      className="aspect-square h-24 border-2 flex items-center justify-center p-3 rounded-xl border-dashed gap-1 text-sm font-bold cursor-pointer transition-all border-red-300/30 bg-red-200/10 hover:border-red-100/80 hover:bg-red-200/15"
+                      onClick={() => onUpdate("removeAudio")(true)}
+                    >
+                      <XIcon className="size-4" />
+                      Remove Existing
+                    </div>
+                  )}
+                  {form.removeAudio && (
+                    <div className="text-red-500 font-bold text-sm my-2 flex items-center gap-2">
+                      <XIcon size={14} /> Existing audio will be removed
+                      <button type="button" onClick={() => onUpdate("removeAudio")(false)} className="text-blue-500 underline text-xs">Undo</button>
+                    </div>
+                  )}
+                </div>
+                {form.bgm && (
+                  <div className="file-preview selected">
+                    <div className="file-info-row">
+                      <span>{t('modal.selected', { name: form.bgm.name })}</span>
+                      <button type="button" onClick={() => onUpdate("bgm")(null)} className="remove-preview-btn">
+                        <XIcon size={14} /> {t('modal.remove', 'Remove')}
+                      </button>
+                    </div>
+                    <FilePreview file={form.bgm} type="audio" />
+                  </div>
+                )}
+                {editData && editData.bgmUrl && !form.bgm && !form.removeAudio && (
+                  <div className="file-preview">
+                    <div className="file-info-row">
+                      <span>{t('modal.current', { name: editData.bgmUrl.split('/').pop() })}</span>
+                    </div>
+                    <div className="audio-preview-container">
+                      <AudioControls
+                        bgmUrl={editData.bgmUrl}
+                        onPlay={() => handlePlay('edit-bgm')}
+                        onStop={() => handleStop('edit-bgm')}
                         isPlaying={currentlyPlaying === 'edit-bgm'}
+                        isActive={currentlyPlaying === 'edit-bgm'}
+                        audioRef={(ref) => handleAudioRef('edit-bgm', ref)}
                       />
-                    )}
+                      {currentlyPlaying === 'edit-bgm' && (
+                        <AudioVisualizer
+                          audioRef={audioRefs.current['edit-bgm']}
+                          isPlaying={currentlyPlaying === 'edit-bgm'}
+                        />
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
 
-              <label className="label-chart" htmlFor="chart">Chart (.SUS or .USC or w/o extension):</label>
-              <input 
-                id="chart" 
-                className="input-chart" 
-                type="file" 
-                onChange={onUpdate("chart")} 
-              />
-              {editData && editData.chartUrl && !form.chart && (
-                <div className="file-preview">
-                  <span>Current: {editData.chartUrl.split('/').pop()}</span>
-                </div>
-              )}
-
-              <label className="label-preview" htmlFor="preview">Preview Audio (optional):</label>
-              <input 
-                id="preview" 
-                className="input-preview" 
-                type="file" 
-                accept="audio/mp3, audio/mpeg"  
-                onChange={onUpdate("preview")} 
-              />
-              {editData && editData.previewUrl && !form.preview && (
-                <div className="file-preview">
-                  <span>Current: {editData.previewUrl.split('/').pop()}</span>
-                  <div className="audio-preview-container">
-                    <AudioControls
-                      bgmUrl={editData.previewUrl}
-                      onPlay={() => handlePlay('edit-preview')}
-                      onStop={() => handleStop('edit-preview')}
-                      isPlaying={currentlyPlaying === 'edit-preview'}
-                      isActive={currentlyPlaying === 'edit-preview'}
-                      audioRef={(ref) => handleAudioRef('edit-preview', ref)}
+              <div className="form-group file-section">
+                <label htmlFor="chart_edit">{t('modal.chartFile', 'Chart File')} (max {limits?.files?.chart ? formatBytes(limits.files.chart) : '10MB'})</label>
+                <div className="flex gap-1 flex-col">
+                  {(!editData?.chartUrl || form.removeChart) && (
+                    <input
+                      id="chart_edit"
+                      type="file"
+                      onChange={checkFileLimit(limits?.files?.chart || 10 * 1024 * 1024, (e) => {
+                        onUpdate("chart")(e);
+                        onUpdate("removeChart")(false);
+                      })}
                     />
-                    {currentlyPlaying === 'edit-preview' && (
-                      <AudioVisualizer
-                        audioRef={audioRefs.current['edit-preview']}
-                        isPlaying={currentlyPlaying === 'edit-preview'}
-                      />
-                    )}
+                  )}
+                  {!form.chart && editData && editData.chartUrl && !form.removeChart && (
+                    <div
+                      className="aspect-square h-24 border-2 flex items-center justify-center p-3 rounded-xl border-dashed gap-1 text-sm font-bold cursor-pointer transition-all border-red-300/30 bg-red-200/10 hover:border-red-100/80 hover:bg-red-200/15"
+                      onClick={() => onUpdate("removeChart")(true)}
+                    >
+                      <XIcon className="size-4" />
+                      Remove Existing / Replace
+                    </div>
+                  )}
+                  {form.removeChart && (
+                    <div className="text-red-500 font-bold text-sm my-2 flex items-center gap-2">
+                      <XIcon size={14} /> Existing chart will be removed
+                      <button type="button" onClick={() => onUpdate("removeChart")(false)} className="text-blue-500 underline text-xs">Undo</button>
+                    </div>
+                  )}
+                </div>
+                {form.chart && (
+                  <div className="file-preview selected">
+                    <div className="file-info-row">
+                      <span>{t('modal.selected', { name: form.chart.name })}</span>
+                      <button type="button" onClick={() => onUpdate("chart")(null)} className="remove-preview-btn">
+                        <XIcon size={14} /> {t('modal.remove', 'Remove')}
+                      </button>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+                {editData && editData.chartUrl && !form.chart && !form.removeChart && (
+                  <div className="file-preview">
+                    <div className="file-info-row">
+                      <span>{t('modal.current', { name: "Chart File" })}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
 
-              <label className="label-background" htmlFor="background">Background Image (optional):</label>
-              <input 
-                id="background" 
-                className="input-background" 
-                type="file" 
-                accept="image/png" 
-                onChange={onUpdate("background")} 
-              />
-              {editData && editData.backgroundUrl && editData.has_bg && !form.background && (
-                <div className="file-preview">
-                  <img src={editData.backgroundUrl} alt="Current background" style={{maxWidth: '200px', maxHeight: '100px', objectFit: 'cover'}} />
-                  <span>Current: {editData.backgroundUrl.split('/').pop()}</span>
+              <div className="form-group file-section">
+                <label htmlFor="preview_edit">{t('modal.previewAudio', 'Preview Audio (Optional)')} (max {limits?.files?.preview ? formatBytes(limits.files.preview) : '50 MB'})</label>
+                <div className="flex gap-1">
+                  <input
+                    id="preview_edit"
+                    type="file"
+                    accept="audio/mp3, audio/mpeg"
+                    onChange={checkFileLimit(limits?.files?.preview || 20 * 1024 * 1024, (e) => {
+                      onUpdate("preview")(e)
+                      onUpdate("removePreview")(false)
+                    })}
+                  />
+                  {!form.preview && editData && editData.previewUrl && !form.removePreview && (
+                    <div
+                      className="aspect-square h-24 border-2 flex items-center justify-center p-3 rounded-xl border-dashed gap-1 text-sm font-bold cursor-pointer transition-all border-red-300/30 bg-red-200/10 hover:border-red-100/80 hover:bg-red-200/15"
+                      onClick={() => {
+                        onUpdate("removePreview")(true)
+                      }}
+                    >
+                      <XIcon className="size-4" />
+                      Remove Existing
+                    </div>
+                  )}
+                  {form.removePreview && (
+                    <div className="text-red-500 font-bold text-sm my-2 flex items-center gap-2">
+                      <XIcon size={14} /> Existing preview will be removed
+                      <button type="button" onClick={() => onUpdate("removePreview")(false)} className="text-blue-500 underline text-xs">Undo</button>
+                    </div>
+                  )}
                 </div>
-              )}
+                {form.preview && (
+                  <div className="file-preview selected">
+                    <div className="file-info-row">
+                      <span>{t('modal.selected', { name: form.preview.name })}</span>
+                      <button type="button" onClick={() => onUpdate("preview")(null)} className="remove-preview-btn">
+                        <XIcon size={14} /> {t('modal.remove', 'Remove')}
+                      </button>
+                    </div>
+                    <FilePreview file={form.preview} type="audio" />
+                  </div>
+                )}
+                {editData && editData.previewUrl && !form.preview && !form.removePreview && (
+                  <div className="file-preview">
+                    <span>{t('modal.current', { name: editData.previewUrl.split('/').pop() })}</span>
+                    <div className="audio-preview-container">
+                      <AudioControls
+                        bgmUrl={editData.previewUrl}
+                        onPlay={() => handlePlay('edit-preview')}
+                        onStop={() => handleStop('edit-preview')}
+                        isPlaying={currentlyPlaying === 'edit-preview'}
+                        isActive={currentlyPlaying === 'edit-preview'}
+                        audioRef={(ref) => handleAudioRef('edit-preview', ref)}
+                      />
+                      {currentlyPlaying === 'edit-preview' && (
+                        <AudioVisualizer
+                          audioRef={audioRefs.current['edit-preview']}
+                          isPlaying={currentlyPlaying === 'edit-preview'}
+                        />
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
 
-              <button className="edit-save-btn" type="submit">Save</button>
-            </form>
-          </div>
-          <div className="upload-form" hidden={mode !== "upload"}>
+              <div className="form-group file-section">
+                <label htmlFor="background_edit">{t('modal.backgroundImage', 'Background Image (Optional)')} (max {limits?.files?.background ? formatBytes(limits.files.background) : '50 MB'})</label>
+                <div className="flex gap-1">
+                  <input
+                    id="background_edit"
+                    type="file"
+                    accept="image/png"
+                    onChange={checkFileLimit(limits?.files?.background || 5 * 1024 * 1024, (e) => {
+                      onUpdate("background")(e)
+                      onUpdate("removeBackground")(false)
+                    })}
+                  />
+                  {!form.background && editData && editData.backgroundUrl && !form.removeBackground && (
+                    <div
+                      className="aspect-square h-24 border-2 flex items-center justify-center p-3 rounded-xl border-dashed gap-1 text-sm font-bold cursor-pointer transition-all border-red-300/30 bg-red-200/10 hover:border-red-100/80 hover:bg-red-200/15"
+                      onClick={() => {
+                        onUpdate("removeBackground")(true)
+                      }}
+                    >
+                      <XIcon className="size-4" />
+                      Remove Existing
+                    </div>
+                  )}
+                  {form.removeBackground && (
+                    <div className="text-red-500 font-bold text-sm my-2 flex items-center gap-2">
+                      <XIcon size={14} /> Existing background will be removed
+                      <button type="button" onClick={() => onUpdate("removeBackground")(false)} className="text-blue-500 underline text-xs">Undo</button>
+                    </div>
+                  )}
+                </div>
+                {form.background && (
+                  <div className="file-preview selected">
+                    <div className="file-info-row">
+                      <span>{t('modal.selected', { name: form.background.name })}</span>
+                      <button type="button" onClick={() => onUpdate("background")(null)} className="remove-preview-btn">
+                        <XIcon size={14} /> {t('modal.remove', 'Remove')}
+                      </button>
+                    </div>
+                    <FilePreview file={form.background} type="image" />
+                  </div>
+                )}
+                {editData && editData.backgroundUrl && !form.background && !form.removeBackground && (
+                  <div className="file-preview">
+                    <img src={editData.backgroundUrl} alt="Current Background" />
+                  </div>
+                )}
+              </div>
+
+              <button className="edit-save-btn" type="submit" disabled={loading}>
+                {loading ? t('modal.saving', 'Saving...') : t('modal.saveChanges', 'Save Changes')}
+              </button>
+            </form >
+          </div >
+
+          {}
+          < div className="upload-form" hidden={mode !== "upload"
+          }>
+            {}
+            < div className="modal-reminders" >
+              <h4>{t('modal.remindersTitle', '⚠️ Read before uploading:')}</h4>
+              <ul className="rules-list text-sm opacity-90 space-y-1">
+                <li>1. No slurs, racism, politics, heavily inappropriate things, advertising, etc.</li>
+                <li>2. No super-low quality shitposts (we allow some shitposts)</li>
+                <li>3. No public Arcaea or Taiko no Tatsujin songs</li>
+                <li>4. Do not abuse our services for the sake of abusing them</li>
+                <li>5. No official charts with minor modifications (All Flicks or All Traces are allowed occasionally only)</li>
+                <li>6. Use some common sense please</li>
+                <li>7. No incomplete charts</li>
+              </ul>
+              <div className="mt-2 text-xs opacity-75 flex items-center gap-1">
+                <CheckCircleIcon size={12} />
+                <span>Rules 2, 3, 5, and 7 can be <strong>ignored if Unlisted</strong>.</span>
+              </div>
+            </div >
             <form onSubmit={onSubmit}>
-              <label className="label-title" htmlFor="title">Song title (max 50 chars):</label>
-              <input 
-                id="title" 
-                className="input-title" 
-                type="text" 
-                value={form.title} 
-                onChange={onUpdate("title")} 
-                maxLength={50}
-                required
+              <ModalInput id="title_up" label={`${t('modal.songTitle', 'Song Title')} * `} value={form.title} onChange={onUpdate("title")} maxLength={limits?.text?.title || 50} placeholder="e.g. Bad Apple!!" required />
+              <ModalInput id="artists_up" label={`${t('modal.artists', 'Artist(s)')} * `} value={form.artists} onChange={onUpdate("artists")} maxLength={limits?.text?.artist || 50} placeholder="e.g. Alstroemeria Records" required />
+              <div className="preview-text text-sm text-gray-400 mt-1">
+                Preview: <FormattedText text={form.artists || "Artist Name"} />
+              </div>
+              <div className="form-group">
+                <ModalInput id="author_up" label={`${t('modal.charter', 'Charter Name')} * `} value={form.author} onChange={onUpdate("author")} maxLength={limits?.text?.author || 50} placeholder="Your username" required />
+                <div className="preview-text text-sm text-gray-400 mt-1">
+                  Preview: <FormattedText text={form.author || "Charter Name"} />
+                </div>
+              </div>
+
+              <ModalInput
+                id="rating_up"
+                label={`${t('modal.level', 'Level')} * `}
+                value={form.rating}
+                onChange={(e) => {
+                  let val = e.target.value;
+                  if (val.length > 3) val = val.slice(0, 3);
+                  onUpdate("rating")(val)
+                }}
+                placeholder="e.g. 28"
+                required type="number"
+                inputMode="numeric"
+                onWheel={(e) => e.target.blur()}
               />
 
-              <label className="label-artist" htmlFor="artists">Artist(s) (max 50 chars):</label>
-              <input 
-                id="artists" 
-                className="input-artist" 
-                type="text" 
-                value={form.artists} 
-                onChange={onUpdate("artists")} 
-                maxLength={50}
-                required
-              />
+              <div className="relative">
+                <ModalTextarea
+                  id="description_up"
+                  label={t('modal.description', 'Description (Optional)')}
+                  value={form.description}
+                  onChange={onUpdate("description")}
+                  maxLength={limits?.text?.description || 1000}
+                  placeholder="Any comments or details..."
+                  ref={descriptionUpRef}
+                />
+                <EmojiSuggestion
+                  value={form.description}
+                  textareaRef={descriptionUpRef}
+                  onSelect={(newVal) => onUpdate("description")(newVal)}
+                  isOpen={emojiOpenUp}
+                  setIsOpen={setEmojiOpenUp}
+                />
+              </div>
 
-              <label className="label-charter" htmlFor="author">Charter Name (max 50 chars):</label>
-              <input 
-                id="author" 
-                className="input-charter" 
-                type="text" 
-                value={form.author} 
-                onChange={onUpdate("author")} 
-                maxLength={50}
-                required
-              />
+              <ModalInput id="tags_up" label={t('modal.tags', 'Tags')} value={form.tags} onChange={onUpdate("tags")} placeholder="e.g. Touhou, Vocaloid" />
 
-              <label className="label-rating" htmlFor="rating">Level:</label>
-              <input 
-                id="rating" 
-                className="input-rating" 
-                type="number" 
-                inputMode="numeric" 
-                value={form.rating} 
-                onChange={onUpdate("rating")} 
-                min={-999}
-                max={999}
-                required
-              />
+              <div className="form-group">
+                <label htmlFor="visibility_up">{t('modal.visibility', 'Visibility')} *</label>
+                <LiquidSelect
+                  value={form.visibility || "public"}
+                  onChange={(e) => onUpdate("visibility")(e)}
+                  options={visibilityOptions}
+                />
+              </div>
 
-              <label className="label-description" htmlFor="description">Description (max 1000 chars):</label>
-              <textarea 
-                id="description" 
-                className="input-description" 
-                value={form.description} 
-                onChange={onUpdate("description")} 
-                rows="7"
-                maxLength={1000}
-                placeholder="Optional description..."
-              />
+              <div className="form-group file-section">
+                <label htmlFor="jacket_up">{t('modal.coverImage', 'Cover Image')} (.png/.jpg, max {limits?.files?.jacket ? formatBytes(limits.files.jacket) : '5MB'}) *</label>
+                <input
+                  id="jacket_up"
+                  type="file"
+                  accept="image/png, image/jpeg"
+                  onChange={checkFileLimit(limits?.files?.jacket || 5 * 1024 * 1024, onUpdate("jacket"))}
+                  required
+                />
+                {form.jacket && (
+                  <div className="file-preview selected">
+                    <div className="file-info-row">
+                      <span>{t('modal.selected', { name: form.jacket.name })}</span>
+                      <button type="button" onClick={() => onUpdate("jacket")(null)} className="remove-preview-btn">
+                        <XIcon size={14} /> {t('modal.remove', 'Remove')}
+                      </button>
+                    </div>
+                    <FilePreview file={form.jacket} type="image" />
+                  </div>
+                )}
+              </div>
 
-              <label className="label-tags" htmlFor="tags">Tags (max 3 tags, 10 chars each):</label>
-              <input 
-                id="tags" 
-                className="input-tags" 
-                type="text" 
-                value={form.tags} 
-                onChange={onUpdate("tags")} 
-                placeholder="tag1, tag2, tag3"
-              />
 
-              <label className="label-jacket" htmlFor="jacket">Cover Image:</label>
-              <input 
-                id="jacket" 
-                className="input-jacket" 
-                type="file" 
-                accept="image/png,image/jpeg,image/jp2,image/avif,image/x-icon,image/icns"
-                onChange={onUpdate("jacket")} 
-                required
-              />
 
-              <label className="label-bgm" htmlFor="bgm">Audio File (mp3):</label>
-              <input 
-                id="bgm" 
-                className="input-bgm" 
-                type="file" 
-                accept="audio/mp3, audio/mpeg"  
-                onChange={onUpdate("bgm")} 
-                required
-              />
+              <div className="form-group file-section">
+                <label htmlFor="bgm_up">{t('modal.audio', 'Audio')} (.mp3, max {limits?.files?.audio ? formatBytes(limits.files.audio) : '20MB'}) *</label>
+                <input
+                  id="bgm_up"
+                  type="file"
+                  accept="audio/mp3, audio/mpeg"
+                  onChange={checkFileLimit(limits?.files?.audio || 20 * 1024 * 1024, onUpdate("bgm"))}
+                  required
+                />
+                {form.bgm && (
+                  <div className="file-preview selected">
+                    <div className="file-info-row">
+                      <span>{t('modal.selected', { name: form.bgm.name })}</span>
+                      <button type="button" onClick={() => onUpdate("bgm")(null)} className="remove-preview-btn">
+                        <XIcon size={14} /> {t('modal.remove', 'Remove')}
+                      </button>
+                    </div>
+                    <FilePreview file={form.bgm} type="audio" />
+                  </div>
+                )}
+              </div>
 
-              <label className="label-chart" htmlFor="chart">Chart File (.SUS or .USC or LevelData):</label>
-              <input 
-                id="chart" 
-                className="input-chart" 
-                type="file" 
-                onChange={onUpdate("chart")} 
-                required
-              />
+              <div className="form-group file-section">
+                <label htmlFor="chart_up">{t('modal.chartFile', 'Chart File')} (max {limits?.files?.chart ? formatBytes(limits.files.chart) : '10MB'}) *</label>
+                <input
+                  id="chart_up"
+                  type="file"
+                  onChange={checkFileLimit(limits?.files?.chart || 10 * 1024 * 1024, onUpdate("chart"))}
+                  required
+                />
+                {form.chart && (
+                  <div className="file-preview selected">
+                    <div className="file-info-row">
+                      <span>{t('modal.selected', { name: form.chart.name })}</span>
+                      <button type="button" onClick={() => onUpdate("chart")(null)} className="remove-preview-btn">
+                        <XIcon size={14} /> {t('modal.remove', 'Remove')}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
 
-              <label className="label-preview" htmlFor="preview">Preview Audio (optional mp3):</label>
-              <input 
-                id="preview" 
-                className="input-preview" 
-                type="file" 
-                accept="audio/mp3, audio/mpeg"  
-                onChange={onUpdate("preview")} 
-              />
+              <div className="form-group file-section">
+                <label htmlFor="preview_up">{t('modal.previewAudio', 'Preview Audio (Optional)')} (max {limits?.files?.preview ? formatBytes(limits.files.preview) : '50 MB'})</label>
+                <input
+                  id="preview_up"
+                  type="file"
+                  accept="audio/mp3, audio/mpeg"
+                  onChange={checkFileLimit(limits?.files?.preview || 20 * 1024 * 1024, onUpdate("preview"))}
+                />
+                {form.preview && (
+                  <div className="file-preview selected">
+                    <div className="file-info-row">
+                      <span>{t('modal.selected', { name: form.preview.name })}</span>
+                      <button type="button" onClick={() => onUpdate("preview")(null)} className="remove-preview-btn">
+                        <XIcon size={14} /> {t('modal.remove', 'Remove')}
+                      </button>
+                    </div>
+                    <FilePreview file={form.preview} type="audio" />
+                  </div>
+                )}
+              </div>
 
-              <label className="label-background" htmlFor="background">Background Image (optional png only):</label>
-              <input 
-                id="background" 
-                className="input-background" 
-                type="file" 
-                accept="image/png" 
-                onChange={onUpdate("background")} 
-              />
+              <div className="form-group file-section">
+                <label htmlFor="background_up">{t('modal.backgroundImage', 'Background Image (Optional)')} (max {limits?.files?.background ? formatBytes(limits.files.background) : '50 MB'})</label>
+                <input
+                  id="background_up"
+                  type="file"
+                  accept="image/png"
+                  onChange={checkFileLimit(limits?.files?.background || 5 * 1024 * 1024, onUpdate("background"))}
+                />
+                {form.background && (
+                  <div className="file-preview selected">
+                    <div className="file-info-row">
+                      <span>{t('modal.selected', { name: form.background.name })}</span>
+                      <button type="button" onClick={() => onUpdate("background")(null)} className="remove-preview-btn">
+                        <XIcon size={14} /> {t('modal.remove', 'Remove')}
+                      </button>
+                    </div>
+                    <FilePreview file={form.background} type="image" />
+                  </div>
+                )}
+              </div>
 
-              <button 
-                className="upload-save-btn" 
+              <button
+                className="upload-save-btn"
                 type="submit"
                 disabled={loading}
               >
-                {loading ? "Uploading..." : "Upload Chart"}
+                {loading ? (
+                  <>
+                    <Loader2 size={18} className="animate-spin" />
+                    {t('modal.uploading', 'Uploading...')}
+                  </>
+                ) : (
+                  t('modal.upload', 'Upload Chart')
+                )}
               </button>
             </form>
-          </div>
-        </div>
-      </div>
-    </div>
+          </div >
+        </div >
+      </div >
+    </div >,
+    document.body
   );
 }

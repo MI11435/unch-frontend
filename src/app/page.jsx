@@ -1,418 +1,502 @@
-"use client";
-import { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import "./page.css"
+﻿"use client";
+import { useEffect, useState, useRef, Suspense, useCallback } from "react";
 import Link from "next/link";
-import tempData from "./temp-data/levels.json"
-import dotenv from "dotenv";
+import { Loader2, TrendingUp, Sparkles, Zap, Shuffle, PlayCircle, Settings, Clock, Star, Heart, Type, ArrowUp, ArrowDown, User } from "lucide-react";
 import ChartsList from "../components/charts-list/ChartsList";
 import PaginationControls from "../components/pagination-controls/PaginationControls";
+import HeroSection from "../components/hero-section/HeroSection";
+import TrendingCarousel from "../components/trending-carousel/TrendingCarousel";
+import "../components/trending-carousel/TrendingCarousel.css";
+import HomepageChartCard from "../components/homepage-chart-card/HomepageChartCard";
+import "./page.css";
+import { useLanguage } from "../contexts/LanguageContext";
 import { useUser } from "../contexts/UserContext";
+import { useRouter, useSearchParams } from "next/navigation";
+import ViewAllDrawer from "../components/view-all-drawer/ViewAllDrawer";
 
+const APILink = process.env.NEXT_PUBLIC_API_URL;
 
-export default function Home() {
-  const { sonolusUser, session, isSessionValid, clearExpiredSession, isClient } = useUser();
-  
-  // Unified section state
-  const [sectionMode, setSectionMode] = useState("myCharts"); // "myCharts" or "search"
-  
-  // Search parameters
-  const [searchType, setSearchType] = useState("random");
-  const [currentPage, setCurrentPage] = useState(0);
-  const [pageCount, setPageCount] = useState(0);
-  const [totalCount, setTotalCount] = useState(0);
-  
-  // Advanced search parameters
+import LiquidSelect from "../components/liquid-select/LiquidSelect";
+
+function HomeContent() {
+  const { t } = useLanguage();
+  const { sonolusUser } = useUser();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  const [viewMode, setViewMode] = useState("home");
+
+  const [homeData, setHomeData] = useState({
+    staffPicks: [],
+    trending: [],
+    newCharts: []
+  });
+
+  const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const [page, setPage] = useState(0);
+  const [pageCount, setPageCount] = useState(1);
+  const [totalResults, setTotalResults] = useState(0);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchType, setSearchType] = useState("newest");
+  const [sortBy, setSortBy] = useState("created_at");
+  const [sortOrder, setSortOrder] = useState("desc");
+
   const [minRating, setMinRating] = useState("");
   const [maxRating, setMaxRating] = useState("");
-  const [tags, setTags] = useState("");
   const [minLikes, setMinLikes] = useState("");
   const [maxLikes, setMaxLikes] = useState("");
-  const [likedBy, setLikedBy] = useState(false);
   const [titleIncludes, setTitleIncludes] = useState("");
   const [descriptionIncludes, setDescriptionIncludes] = useState("");
   const [artistsIncludes, setArtistsIncludes] = useState("");
-  const [sortBy, setSortBy] = useState("created_at");
-  const [sortOrder, setSortOrder] = useState("desc");
-  const [metaIncludes, setMetaIncludes] = useState("");
-
-  // Unified posts state
-  const [posts, setPosts] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-
-  // Audio state management
-  const [currentlyPlaying, setCurrentlyPlaying] = useState(null);
-  const audioRefs = useRef({});
-
-  const handleSearch = async (page = 0) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const apiUrl = process.env['NEXT_PUBLIC_API_URL'];
-      
-      // Build query parameters based on search type
-      const params = new URLSearchParams();
-      params.append('type', searchType);
-      params.append('page', page.toString());
-      
-      if (searchType === 'quick') {
-        // For quick search, only meta_includes, sort_by, and sort_order take effect
-        if (metaIncludes) params.append('meta_includes', metaIncludes);
-        params.append('sort_by', sortBy);
-        params.append('sort_order', sortOrder);
-      } else if (searchType === 'advanced') {
-        // For advanced search, all parameters take effect
-        if (minRating) params.append('min_rating', minRating);
-        if (maxRating) params.append('max_rating', maxRating);
-        if (tags) params.append('tags', tags);
-        if (minLikes) params.append('min_likes', minLikes);
-        if (maxLikes) params.append('max_likes', maxLikes);
-        if (likedBy) params.append('liked_by', 'true');
-        if (titleIncludes) params.append('title_includes', titleIncludes);
-        if (descriptionIncludes) params.append('description_includes', descriptionIncludes);
-        if (artistsIncludes) params.append('artists_includes', artistsIncludes);
-        params.append('sort_by', sortBy);
-        params.append('sort_order', sortOrder);
-        if (metaIncludes) params.append('meta_includes', metaIncludes);
-      }
-      
-      const res = await fetch(`${apiUrl}/api/charts?${params.toString()}`);
-      if (!res.ok) throw new Error(`Network error: ${res.status}`);
-      const data = await res.json();
-
-      const BASE = data.asset_base_url || `${apiUrl}`;
-      const items = Array.isArray(data?.data) ? data.data : [];
-
-      const normalized = items.map((item) => ({
-        id: item.id,
-        title: item.title,
-        artists: item.artists,
-        author: item.author_full,
-        authorId: item.author,
-        rating: item.rating,
-        description: item.description,
-        tags: item.tags,
-        coverUrl: item.jacket_file_hash ? `${BASE}/${item.author}/${item.id}/${item.jacket_file_hash}` : "",
-        bgmUrl: item.music_file_hash ? `${BASE}/${item.author}/${item.id}/${item.music_file_hash}` : "",
-        backgroundUrl: item.background_file_hash ? `${BASE}/${item.author}/${item.id}/${item.background_file_hash}` : `${BASE}/sonolus/repository/1abfcce9c2bc2c41c1ddeaabb6ada4bad8f3e020`,
-        chartUrl: item.chart_file_hash ? `${BASE}/${item.author}/${item.id}/${item.chart_file_hash}` : "",
-        likeCount: item.like_count,
-        createdAt: item.created_at,
-        updatedAt: item.updated_at,
-      }));
-
-      setPosts(normalized);
-      setCurrentPage(page);
-      
-      // Set pagination info (only for quick and advanced, not random)
-      if (searchType !== 'random') {
-        setPageCount(data.pageCount || 0);
-      } else {
-        setPageCount(0);
-      }
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }  
-  };
-
-  const handleMyCharts = async (page = 0) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const APILink = process.env.NEXT_PUBLIC_API_URL;
-      const res = await fetch(
-        `${APILink}/api/charts?page=${page}&type=quick`
-      );
-      if (!res.ok) throw new Error(`Network error: ${res.status}`);
-      const data = await res.json();
-
-      const BASE = data.asset_base_url || `${APILink}`;
-      const items = Array.isArray(data?.data) ? data.data : [];
-
-      const normalized = items.map((item) => ({
-        id: item.id,
-        title: item.title,
-        artists: item.artists,
-        author: item.author_full || item.author,
-        rating: item.rating,
-        description: item.description,
-        tags: item.tags,
-        coverUrl: item.jacket_file_hash ? `${BASE}/${item.author}/${item.id}/${item.jacket_file_hash}` : "",
-        bgmUrl: item.music_file_hash ? `${BASE}/${item.author}/${item.id}/${item.music_file_hash}` : "",
-        backgroundUrl: item.background_file_hash ? `${BASE}/${item.author}/${item.id}/${item.background_file_hash}` : `${BASE}/sonolus/repository/1abfcce9c2bc2c41c1ddeaabb6ada4bad8f3e020`,
-        chartUrl: item.chart_file_hash ? `${BASE}/${item.author}/${item.id}/${item.chart_file_hash}` : "",
-        likeCount: item.like_count,
-        createdAt: item.created_at,
-        updatedAt: item.updated_at,
-      }));
-
-      setPosts(normalized);
-      setPageCount(data.pageCount || 0);
-      setTotalCount(data.data?.[0]?.total_count || 0);
-      setCurrentPage(page);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Audio control functions
-  const handlePlay = (postId) => {
-    // Stop any currently playing audio
-    if (currentlyPlaying && currentlyPlaying !== postId) {
-      const currentAudio = audioRefs.current[currentlyPlaying];
-      if (currentAudio) {
-        currentAudio.pause();
-        currentAudio.currentTime = 0;
-      }
-    }
-
-    setCurrentlyPlaying(postId);
-  };
-
-  const handleStop = (postId) => {
-    if (currentlyPlaying === postId) {
-      setCurrentlyPlaying(null);
-    }
-  };
-
-  const handleAudioRef = useCallback((postId, audioElement) => {
-    audioRefs.current[postId] = audioElement;
-  }, []);
-
-  // Unified function to handle both modes
-  const handleModeChange = (mode) => {
-    setSectionMode(mode);
-    if (mode === "myCharts") {
-      handleMyCharts(0);
-    } else if (mode === "search") {
-      handleSearch(0);
-    }
-  };
-
-  // Unified pagination handler
-  const handlePageChange = (page) => {
-    if (sectionMode === "myCharts") {
-      handleMyCharts(page);
-    } else if (sectionMode === "search") {
-      handleSearch(page);
-    }
-  };
+  const [tags, setTags] = useState("");
+  const [likedBy, setLikedBy] = useState(false);
+  const [staffPick, setStaffPick] = useState(false);
+  const [sonolusHandleIs, setSonolusHandleIs] = useState("");
 
   useEffect(() => {
-    handleMyCharts(); // Start with MyCharts by default
+    const handle = searchParams.get('sonolus_handle_is');
+    if (handle) {
+      setSonolusHandleIs(handle);
+      setSearchType('advanced');
+      setViewMode('search');
+    }
+  }, [searchParams]);
+
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerTitle, setDrawerTitle] = useState("");
+  const [drawerCharts, setDrawerCharts] = useState([]);
+  const [drawerFetchType, setDrawerFetchType] = useState(null);
+
+  const mapChartData = useCallback((item, baseUrl = "") => {
+    const authorHash = item.author;
+    const authorName = item.author_full || item.author || "Unknown";
+
+    const coverHash = item.jacket_file_hash || (item.cover ? item.cover.hash : null);
+    const bgmHash = item.music_file_hash || (item.bgm ? item.bgm.hash : null);
+    const backgroundHash = item.background_file_hash || (item.background ? item.background.hash : null);
+    const backgroundV3Hash = item.background_v3_file_hash || (item.backgroundV3 ? item.backgroundV3.hash : null);
+
+    const coverUrl = (baseUrl && coverHash && authorHash)
+      ? `${baseUrl}/${authorHash}/${item.id}/${coverHash}`
+      : (item.coverUrl || (item.cover ? item.cover.url : null) || (item.thumbnail ? item.thumbnail.url : null));
+
+    const bgmUrl = (baseUrl && bgmHash && authorHash)
+      ? `${baseUrl}/${authorHash}/${item.id}/${bgmHash}`
+      : (item.bgmUrl || (item.bgm ? item.bgm.url : null));
+
+    const backgroundUrl = (baseUrl && backgroundHash && authorHash)
+      ? `${baseUrl}/${authorHash}/${item.id}/${backgroundHash}`
+      : (item.backgroundUrl || null);
+
+    const backgroundV3Url = (baseUrl && backgroundV3Hash && authorHash)
+      ? `${baseUrl}/${authorHash}/${item.id}/${backgroundV3Hash}`
+      : (item.backgroundV3Url || null);
+
+    const mapped = {
+      ...item,
+      id: item.id || item.name || "",
+      title: item.title,
+      artists: item.artists || "Unknown Artist",
+      author: authorName,
+      authorId: item.author || "",
+      authorHandle: item.author_handle || item.author || "",
+      assetBaseUrl: baseUrl,
+      coverUrl: coverUrl,
+      bgmUrl: bgmUrl,
+      backgroundUrl: backgroundUrl,
+      backgroundV3Url: backgroundV3Url,
+      likeCount: item.likeCount ?? item.likes ?? item.like_count ?? 0,
+      commentsCount: item.comment_count ?? item.commentsCount ?? (Array.isArray(item.comments) ? item.comments.length : item.comments) ?? item.comments_count ?? 0,
+      rating: item.rating ?? 0,
+      createdAt: item.createdAt || item.created_at,
+    };
+    return mapped;
   }, []);
 
-  if (loading) return <p>Loading...</p>;
-  if (error) return <p>Error: {error}</p>;
+  const fetchHomeData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [staffPicksRes, trendingRes, newRes] = await Promise.all([
+        fetch(`${APILink}/api/charts?type=advanced&staff_pick=1&limit=10`),
+        fetch(`${APILink}/api/charts?type=advanced&sort_by=decaying_likes&limit=10`),
+        fetch(`${APILink}/api/charts?page=0&type=quick&limit=10`)
+      ]);
+
+      const [staffPicksJson, trendingJson, newJson] = await Promise.all([
+        staffPicksRes.json(),
+        trendingRes.json(),
+        newRes.json(),
+      ]);
+
+      const base = staffPicksJson.asset_base_url || trendingJson.asset_base_url || "";
+
+      setHomeData({
+        staffPicks: (staffPicksJson.data || []).map(item => mapChartData(item, base)),
+        trending: (trendingJson.data || []).map(item => mapChartData(item, base)),
+        newCharts: (newJson.data || []).map(item => mapChartData(item, base))
+      });
+    } catch (err) {
+      console.error("Home fetch error:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [mapChartData]);
+
+  const fetchSearchData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const queryParams = new URLSearchParams();
+      const actualType = searchType === 'newest' ? 'quick' : searchType;
+      queryParams.append('type', actualType);
+      queryParams.append('page', page.toString());
+      queryParams.append('limit', '10');
+
+      if (staffPick && actualType !== 'random') queryParams.append('staff_pick', '1');
+      if (sonolusHandleIs) queryParams.append('sonolus_handle_is', sonolusHandleIs);
+
+      if (actualType === 'quick') {
+        if (searchQuery) queryParams.append('meta_includes', searchQuery);
+        queryParams.append('sort_by', searchType === 'newest' ? 'created_at' : sortBy);
+        queryParams.append('sort_order', sortOrder);
+      } else if (searchType === 'advanced') {
+        if (titleIncludes) queryParams.append('title_includes', titleIncludes);
+        else if (searchQuery) queryParams.append('title_includes', searchQuery);
+        if (descriptionIncludes) queryParams.append('description_includes', descriptionIncludes);
+        if (artistsIncludes) queryParams.append('artists_includes', artistsIncludes);
+        if (minRating) queryParams.append('minR', minRating);
+        if (maxRating) queryParams.append('maxR', maxRating);
+        if (typeof tags === 'string' && tags.trim()) queryParams.append('tags', tags.trim());
+        else if (Array.isArray(tags) && tags.length > 0) queryParams.append('tags', tags.join(','));
+        if (minLikes) queryParams.append('minL', minLikes);
+        if (maxLikes) queryParams.append('maxL', maxLikes);
+        if (likedBy) queryParams.append('liked_by', '1');
+        queryParams.append('sort_by', sortBy);
+        queryParams.append('sort_order', sortOrder);
+      }
+
+      const res = await fetch(`${APILink}/api/charts?${queryParams.toString()}`);
+      const json = await res.json();
+      const base = json.asset_base_url || "";
+      const rawData = (json.data || []).map(item => mapChartData(item, base));
+      const uniquePosts = Array.from(new Map(rawData.map(item => [item.id, item])).values());
+
+      setPosts(uniquePosts);
+      const infiniteScrollTypes = ['newest'];
+      setPageCount(json.pages || json.pageCount || (infiniteScrollTypes.includes(searchType) ? (page + 2) : 1));
+      setTotalResults(json.total || (json.items?.length || json.data?.length || 0));
+    } catch (err) {
+      console.error(err);
+      setError("Failed to load charts.");
+    } finally {
+      setLoading(false);
+    }
+  }, [searchType, page, staffPick, searchQuery, sortBy, sortOrder, minRating, maxRating, tags, minLikes, maxLikes, likedBy, titleIncludes, descriptionIncludes, artistsIncludes, mapChartData, sonolusHandleIs]);
+
+  useEffect(() => {
+    if (viewMode === 'home') {
+      fetchHomeData();
+    } else {
+      fetchSearchData();
+    }
+  }, [viewMode, fetchHomeData, fetchSearchData]);
+
+  const handleSearch = (e) => {
+    e?.preventDefault();
+    if (searchQuery.trim().toLowerCase() === "jadixexposed") {
+      router.push("/?view=jadixexposed-egg-2026");
+      return;
+    }
+    setPage(0);
+    fetchSearchData();
+  };
+
+  const handlePlay = (id, bgmUrl = null) => {
+    if (!bgmUrl) return;
+    const proxied = bgmUrl.startsWith("http") && !bgmUrl.startsWith(window.location.origin)
+      ? `/api/audio-proxy?url=${encodeURIComponent(bgmUrl)}`
+      : bgmUrl;
+    play(id, proxied, { title: "", thumbnail: "", href: "" });
+  };
+
+  const handleStop = (id) => {
+    if (trackId === id) pause();
+  };
+
+  const handleAudioRef = () => {};
+
+  const viewParam = searchParams.get('view');
+  useEffect(() => {
+    if (viewParam === 'jadixexposed-egg-2026') {
+      setViewMode('jadixexposed-egg-2026');
+      setLoading(false);
+    } else if (viewParam === 'search') {
+      setViewMode('search');
+      if (viewMode !== 'search') {
+        setLoading(true);
+      }
+    } else {
+      setViewMode('home');
+    }
+  }, [viewParam]);
+
+  const handleViewAll = (title, charts, fetchType = null) => {
+    setDrawerTitle(title);
+    setDrawerCharts(charts);
+    setDrawerFetchType(fetchType);
+    setDrawerOpen(true);
+  };
 
   return (
-    <main>
-      <div className="dashboard-container">
-        <div className="my-charts">
-          <div className="upload-section">
-            <div className="mode-selector">
-              <button 
-                className={`mode-btn ${sectionMode === 'myCharts' ? 'active' : ''}`}
-                onClick={() => handleModeChange('myCharts')}
-              >
-                All Charts
-              </button>
-              <button 
-                className={`mode-btn ${sectionMode === 'search' ? 'active' : ''}`}
-                onClick={() => handleModeChange('search')}
-              >
-                Search Charts
-              </button>
-            </div>
+    <div className="home-container">
+
+      {viewMode === 'home' ? (
+        <div className="home-content animate-fade-in">
+          <HeroSection posts={homeData.staffPicks} />
+
+          <div className="carousel-section-wrapper">
+            <TrendingCarousel
+              title={t('home.newCharts')}
+              icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="5" width="14" height="14" rx="3" stroke="currentColor" strokeWidth="2"/><path d="M6 10H18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>}
+              charts={homeData.newCharts}
+              CardComponent={HomepageChartCard}
+              onViewAll={() => handleViewAll(t('home.newCharts'), homeData.newCharts, "new")}
+            />
           </div>
 
-          {/* Search Controls - Only show when in search mode */}
-          {sectionMode === 'search' && (
-            <div className="search-controls-container">
-              <div className="search-controls">
-                {/* Search Type */}
-                <div className="search-type-group">
-                  <label>Search Type:</label>
-                  <select value={searchType} onChange={(e) => setSearchType(e.target.value)}>
-                    <option value="random">Random</option>
-                    <option value="quick">Quick</option>
-                    <option value="advanced">Advanced</option>
-                  </select>
-                </div>
+          <div className="carousel-section-wrapper">
+            <TrendingCarousel
+              title={t('home.trendingCharts')}
+              icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 20H3" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><path d="M10 16V10C10 8.89543 9.10457 8 8 8C6.89543 8 6 8.89543 6 10V16" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><path d="M18 16V6C18 4.89543 17.1046 4 16 4C14.8954 4 14 4.89543 14 6V16" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>}
+              charts={homeData.trending}
+              CardComponent={HomepageChartCard}
+              onViewAll={() => handleViewAll(t('home.trendingCharts'), homeData.trending, "trending")}
+            />
+          </div>
 
-                {/* Quick Search Fields */}
-                {(searchType === 'quick' || searchType === 'advanced') && (
-                  <>
-                    <div className="search-field">
-                      <label>Keywords (meta_includes):</label>
-                      <input
-                        type="text"
-                        value={metaIncludes}
-                        onChange={(e) => setMetaIncludes(e.target.value)}
-                        placeholder="Search in metadata..."
-                      />
-                    </div>
-                    
-                    <div className="search-field">
-                      <label>Sort By:</label>
-                      <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-                        <option value="created_at">Created Date</option>
-                        <option value="rating">Rating</option>
-                        <option value="likes">Likes</option>
-                        <option value="decaying_likes">Decaying Likes</option>
-                        <option value="abc">Alphabetical</option>
-                      </select>
-                    </div>
-                    
-                    <div className="search-field">
-                      <label>Sort Order:</label>
-                      <select value={sortOrder} onChange={(e) => setSortOrder(e.target.value)}>
-                        <option value="desc">Descending</option>
-                        <option value="asc">Ascending</option>
-                      </select>
-                    </div>
-                  </>
-                )}
+          <ViewAllDrawer
+            isOpen={drawerOpen}
+            onClose={() => setDrawerOpen(false)}
+            title={drawerTitle}
+            initialCharts={drawerCharts}
+            fetchType={drawerFetchType}
+            apiBase={APILink}
+          />
 
-                {/* Advanced Search Fields */}
-                {searchType === 'advanced' && (
-                  <>
-                    <div className="search-field">
-                      <label>Min Rating:</label>
-                      <input
-                        type="number"
-                        value={minRating}
-                        onChange={(e) => setMinRating(e.target.value)}
-                        placeholder="Minimum level"
-                      />
-                    </div>
-                    
-                    <div className="search-field">
-                      <label>Max Rating:</label>
-                      <input
-                        type="number"
-                        value={maxRating}
-                        onChange={(e) => setMaxRating(e.target.value)}
-                        placeholder="Maximum level"
-                      />
-                    </div>
-                    
-                    <div className="search-field">
-                      <label>Tags:</label>
-                      <input
-                        type="text"
-                        value={tags}
-                        onChange={(e) => setTags(e.target.value)}
-                        placeholder="Comma-separated tags"
-                      />
-                    </div>
-                    
-                    <div className="search-field">
-                      <label>Min Likes:</label>
-                      <input
-                        type="number"
-                        value={minLikes}
-                        onChange={(e) => setMinLikes(e.target.value)}
-                        placeholder="Minimum likes"
-                      />
-                    </div>
-                    
-                    <div className="search-field">
-                      <label>Max Likes:</label>
-                      <input
-                        type="number"
-                        value={maxLikes}
-                        onChange={(e) => setMaxLikes(e.target.value)}
-                        placeholder="Maximum likes"
-                      />
-                    </div>
-                    
-                    <div className="search-field">
-                      <label>
-                        <input
-                          type="checkbox"
-                          checked={likedBy}
-                          onChange={(e) => setLikedBy(e.target.checked)}
-                        />
-                        Liked by me
-                      </label>
-                    </div>
-                    
-                    <div className="search-field">
-                      <label>Title Includes:</label>
-                      <input
-                        type="text"
-                        value={titleIncludes}
-                        onChange={(e) => setTitleIncludes(e.target.value)}
-                        placeholder="Search in titles..."
-                      />
-                    </div>
-                    
-                    <div className="search-field">
-                      <label>Description Includes:</label>
-                      <input
-                        type="text"
-                        value={descriptionIncludes}
-                        onChange={(e) => setDescriptionIncludes(e.target.value)}
-                        placeholder="Search in descriptions..."
-                      />
-                    </div>
-                    
-                    <div className="search-field">
-                      <label>Artists Includes:</label>
-                      <input
-                        type="text"
-                        value={artistsIncludes}
-                        onChange={(e) => setArtistsIncludes(e.target.value)}
-                        placeholder="Search in artists..."
-                      />
-                    </div>
-                    
-                  </>
-                )}
-
-                <button className="search-btn" onClick={() => handleSearch(0)}>
-                  Search
-                </button>
-              </div>
-            </div>
-          )}
-
-          <div className="charts-section">
-            {loading ? (
-              <p>Loading...</p>
-            ) : error ? (
-              <p>Error: {error}</p>
-            ) : (
-              <ChartsList
-                posts={posts}
-                loading={loading}
-                currentlyPlaying={currentlyPlaying}
-                audioRefs={audioRefs.current}
-                onPlay={handlePlay}
-                onStop={handleStop}
-                onAudioRef={handleAudioRef}
-                onEdit={() => {}} // No edit functionality on home page
-                sonolusUser={sonolusUser}
-              />
-            )}
+          <div className="home-footer-action" style={{ textAlign: 'center', marginTop: 60, marginBottom: 40 }}>
+            <Link href="/?view=search">
+              <button className="btn-primary-large">
+                {t('home.exploreAll')}
+              </button>
+            </Link>
           </div>
         </div>
-        
-        {/* Unified Pagination */}
-        {pageCount > 1 && (
-          <PaginationControls
-            pageCount={pageCount}
-            currentPage={currentPage}
-            posts={posts}
-            onPageChange={handlePageChange}
-          />
-        )}
-      </div>
-    </main>
+      ) : viewMode === 'jadixexposed-egg-2026' ? (
+        <div className="egg-page animate-fade-in">
+          <div className="egg-orb egg-orb-1" />
+          <div className="egg-orb egg-orb-2" />
+          <div className="egg-orb egg-orb-3" />
+          <div className="egg-inner">
+            <div className="egg-badge">SECRET UNLOCKED</div>
+            <h1 className="egg-title">
+              You found the Jadix Files
+              <span className="egg-title-sub">classified intel on a certain someone</span>
+            </h1>
+            <div className="egg-gallery">
+              <div className="egg-card">
+                <div className="egg-card-img-wrap">
+                  <img src="/Untitled1472_20260120224400.jpg" alt="Jadixexposed" loading="lazy" />
+                </div>
+                <p>Jadixexposed Original &mdash; Jadix in a maid costume, exposed by his muscular man</p>
+              </div>
+              <div className="egg-card">
+                <div className="egg-card-img-wrap">
+                  <img src="/reiyunlover.png" alt="Reiyunlover" loading="lazy" />
+                </div>
+                <p>Reiyunlover</p>
+              </div>
+              <div className="egg-card">
+                <div className="egg-card-img-wrap">
+                  <img src="/Untitled1498_20260206013808.webp" alt="Welcome Home Master" loading="lazy" />
+                </div>
+                <p>Jadix saying &quot;Welcome Home, Master&quot;</p>
+              </div>
+            </div>
+            <div className="egg-quotes">
+              <div className="egg-quote egg-quote-purple">
+                <div className="egg-quote-avatar">R</div>
+                <div className="egg-quote-body">
+                  <p>&quot;Hai hai! ReiyuN here~ Congratulations for finding this silly page about Jadix! I do lots of abominations so expect more things to pile up here whenever Jadix gets punished by me since I occasionally draw something for him whenever he does something stupid. That&apos;s all bai bai!!&quot;</p>
+                  <span>&mdash; ReiyuN</span>
+                </div>
+              </div>
+              <div className="egg-quote egg-quote-red">
+                <div className="egg-quote-avatar">J</div>
+                <div className="egg-quote-body">
+                  <p>&quot;if you see this, theres a missile coming to your house right now&quot;</p>
+                  <span>&mdash; Jadix</span>
+                </div>
+              </div>
+            </div>
+            <Link href="/" className="egg-back-btn">Back to Safety</Link>
+          </div>
+        </div>
+
+      ) : (
+        <div className="search-content animate-fade-in" style={{ width: '100%', maxWidth: '1000px', margin: '120px auto 0' }}>
+          <div className="searchContainer">
+            <div className="search-filter-header">
+              <span>{t('nav.search', 'search')}</span>
+            </div>
+            <form onSubmit={handleSearch} className="search-form" style={{ width: '100%' }}>
+              <div className="search-controls-grid">
+                <div className="search-control-group">
+                  <label>{t('search.searchType')}</label>
+                  <LiquidSelect
+                    value={searchType}
+                    onChange={(e) => setSearchType(e.target.value)}
+                    options={[
+                      { value: "newest", label: t('search.newest', 'Newest'), icon: Zap },
+                      { value: "random", label: t('search.random'), icon: Shuffle },
+                      { value: "quick", label: t('search.quick', 'Quick'), icon: PlayCircle },
+                      { value: "advanced", label: t('search.advanced'), icon: Settings }
+                    ]}
+                  />
+                </div>
+
+                {searchType !== "random" && searchType !== "newest" && (
+                  <>
+                    <div className="search-control-group" style={{ flexDirection: 'row', alignItems: 'center', minWidth: 'auto', flex: 'none', paddingBottom: '12px', gap: '8px' }}>
+                      <input
+                        type="checkbox"
+                        id="staffPick"
+                        checked={staffPick}
+                        onChange={(e) => setStaffPick(e.target.checked)}
+                        className="accent-sky-500"
+                        style={{ width: '18px', height: '18px', margin: 0, cursor: 'pointer' }}
+                      />
+                      <label htmlFor="staffPick" style={{ margin: 0, fontSize: '0.9rem', color: 'rgba(255,255,255,0.9)', cursor: 'pointer' }}>{t('search.staffPickOnly')}</label>
+                    </div>
+
+                    <div className="search-control-group">
+                      <label>{t('search.sortBy')}</label>
+                      <LiquidSelect
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value)}
+                        options={[
+                          { value: "created_at", label: t('search.createdDate', 'Created Date'), icon: Clock },
+                          { value: "rating", label: "Rating", icon: Star },
+                          { value: "likes", label: "Likes", icon: Heart },
+                          { value: "abc", label: "Alphabetical", icon: Type },
+                          { value: "decaying_likes", label: "Decaying Likes", icon: User }
+                        ]}
+                      />
+                    </div>
+
+                    <div className="search-control-group">
+                      <label>{t('search.order')}</label>
+                      <LiquidSelect
+                        value={sortOrder}
+                        onChange={(e) => setSortOrder(e.target.value)}
+                        options={[
+                          { value: "asc", label: t('search.ascending'), icon: ArrowUp },
+                          { value: "desc", label: t('search.descending'), icon: ArrowDown }
+                        ]}
+                      />
+                    </div>
+                  </>
+                )}
+
+                {searchType !== "random" && (
+                  <div className="search-control-group">
+                    <label>{t('search.keywords')}</label>
+                    <input
+                      type="text"
+                      placeholder={t('search.keywordsPlaceholder')}
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="liquid-input"
+                    />
+                  </div>
+                )}
+
+                {searchType === "advanced" && (
+                  <>
+                    <div className="search-control-group">
+                      <label>{t('search.minRating')}</label>
+                      <input type="number" placeholder={t('search.minRatingPlaceholder')} min="1" max="99" value={minRating} onChange={(e) => setMinRating(e.target.value)} className="liquid-input" />
+                    </div>
+                    <div className="search-control-group">
+                      <label>{t('search.maxRating')}</label>
+                      <input type="number" placeholder={t('search.maxRatingPlaceholder')} min="1" max="99" value={maxRating} onChange={(e) => setMaxRating(e.target.value)} className="liquid-input" />
+                    </div>
+                    <div className="search-control-group">
+                      <label>{t('search.descriptionIncludes', 'Description Includes')}</label>
+                      <input type="text" placeholder={t('search.descriptionPlaceholder', 'Search in descriptions...')} value={descriptionIncludes} onChange={(e) => setDescriptionIncludes(e.target.value)} className="liquid-input" />
+                    </div>
+                    <div className="search-control-group">
+                      <label>{t('search.titleIncludes')}</label>
+                      <input type="text" placeholder={t('search.titlePlaceholder', 'Search in titles...')} value={titleIncludes} onChange={(e) => setTitleIncludes(e.target.value)} className="liquid-input" />
+                    </div>
+                    <div className="search-control-group">
+                      <label>{t('search.artistsIncludes')}</label>
+                      <input type="text" placeholder={t('search.artistsPlaceholder', 'Search in artists...')} value={artistsIncludes} onChange={(e) => setArtistsIncludes(e.target.value)} className="liquid-input" />
+                    </div>
+                    <div className="search-control-group">
+                      <label>{t('search.tags')}</label>
+                      <input type="text" placeholder={t('search.tagsPlaceholder', 'Comma-separated tags')} value={tags} onChange={(e) => setTags(e.target.value)} className="liquid-input" />
+                    </div>
+                    <div className="search-control-group">
+                      <label>{t('search.authorHandle', 'Author Handle')}</label>
+                      <input type="text" placeholder={t('search.authorHandlePlaceholder', 'e.g. 78302')} value={sonolusHandleIs} onChange={(e) => setSonolusHandleIs(e.target.value)} className="liquid-input" />
+                    </div>
+                    <div className="search-control-group" style={{ flexDirection: 'row', alignItems: 'center', minWidth: 'auto', flex: 'none', paddingBottom: '12px' }}>
+                      <input type="checkbox" id="likedByMe" checked={likedBy} onChange={(e) => setLikedBy(e.target.checked)} className="accent-sky-500" style={{ width: '18px', height: '18px', margin: 0, cursor: 'pointer' }} />
+                      <label htmlFor="likedByMe" style={{ margin: 0, fontSize: '0.9rem', color: 'rgba(255,255,255,0.9)', cursor: 'pointer' }}>{t('search.likedByMe', 'Liked by me')}</label>
+                    </div>
+                  </>
+                )}
+
+                <button type="submit" className="search-btn">{t('search.search')}</button>
+              </div>
+            </form>
+          </div>
+
+          <div style={{ position: 'relative', zIndex: 1 }}>
+            <ChartsList
+              posts={posts}
+              loading={loading}
+              sonolusUser={sonolusUser}
+            />
+          </div>
+
+          {searchType === "random" ? (
+            <button
+              className="search-btn"
+              style={{ marginTop: '24px', width: '100%' }}
+              onClick={(e) => { e.preventDefault(); fetchSearchData(); }}
+            >
+              {t('search.reroll', 'Reroll')}
+            </button>
+          ) : pageCount > 1 && (
+            <PaginationControls
+              currentPage={page}
+              pageCount={pageCount}
+              onPageChange={(p) => setPage(p)}
+            />
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={null}>
+      <HomeContent />
+    </Suspense>
   );
 }
