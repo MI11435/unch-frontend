@@ -139,10 +139,8 @@ function DashboardContent() {
   const [menuAnchor, setMenuAnchor] = useState(null);
   const [mounted, setMounted] = useState(false);
 
-  const [scheduleMenuPostId, setScheduleMenuPostId] = useState(null);
+  const [schedulePost, setSchedulePost] = useState(null);
   const [scheduleDtLocal, setScheduleDtLocal] = useState("");
-  const [scheduleAnchor, setScheduleAnchor] = useState(null);
-  const scheduleAnchorRef = useRef(null);
 
   useEffect(() => setMounted(true), []);
 
@@ -180,40 +178,13 @@ function DashboardContent() {
   const openScheduleMenu = (post) => {
     const epoch = getScheduledEpochSeconds(post);
     setScheduleDtLocal(epoch ? epochSecondsToDtLocal(epoch) : "");
-    setScheduleMenuPostId(post.id);
-    setTimeout(() => {
-      const anchor = scheduleAnchorRef.current;
-      if (!anchor) return;
-      const rect = anchor.getBoundingClientRect();
-      const popoverWidth = 300;
-      let left = rect.left;
-      if (left + popoverWidth > window.innerWidth - 8) left = window.innerWidth - popoverWidth - 8;
-      if (left < 8) left = 8;
-      let top = rect.bottom + 6;
-      if (top + 260 > window.innerHeight - 8) top = rect.top - 260 - 6;
-      setScheduleAnchor({ top, left });
-    }, 0);
+    setSchedulePost(post);
   };
 
   const closeScheduleMenu = () => {
-    setScheduleMenuPostId(null);
+    setSchedulePost(null);
     setScheduleDtLocal("");
-    setScheduleAnchor(null);
   };
-
-
-  useEffect(() => {
-    if (!scheduleMenuPostId) return;
-
-    const onDocMouseDown = (e) => {
-      const anchor = scheduleAnchorRef.current;
-      if (!anchor) return;
-      if (!anchor.contains(e.target)) closeScheduleMenu();
-    };
-
-    document.addEventListener("mousedown", onDocMouseDown);
-    return () => document.removeEventListener("mousedown", onDocMouseDown);
-  }, [scheduleMenuPostId]);
 
   const [form, setForm] = useState({
     title: "",
@@ -1077,7 +1048,6 @@ function DashboardContent() {
                             {}
                             <div
                               style={{ position: "relative", display: "inline-flex", alignItems: "center" }}
-                              ref={scheduleMenuPostId === post.id ? scheduleAnchorRef : null}
                             >
                               <LiquidSelect
                                 value={post.status}
@@ -1096,73 +1066,6 @@ function DashboardContent() {
                               />
                             </div>
 
-                            {scheduleMenuPostId === post.id && mounted && scheduleAnchor && createPortal(
-                              <div
-                                className="schedule-popover"
-                                style={{ top: scheduleAnchor.top, left: scheduleAnchor.left }}
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <div className="text-xs opacity-75">{t("dashboard.publicOptions", "Public options")}</div>
-
-                                <button
-                                  className="icon-btn-ghost"
-                                  onClick={async () => {
-                                    await updateVisibility(post, "PUBLIC");
-                                    closeScheduleMenu();
-                                  }}
-                                >
-                                  {t("dashboard.publicNow", "Public Now")}
-                                </button>
-
-                                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                                  <div className="text-xs opacity-75">{t("dashboard.schedulePublish", "Schedule publish")}</div>
-
-                                  <input
-                                    type="datetime-local"
-                                    value={scheduleDtLocal}
-                                    onChange={(e) => setScheduleDtLocal(e.target.value)}
-                                    className="input"
-                                  />
-
-                                  <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
-                                    <button className="icon-btn-ghost" onClick={closeScheduleMenu}>
-                                      {t("dashboard.cancel", "Cancel")}
-                                    </button>
-                                    <button
-                                      className="icon-btn-ghost"
-                                      disabled={!scheduleDtLocal}
-                                      onClick={async () => {
-                                        const epoch = dtLocalToEpochSeconds(scheduleDtLocal);
-                                        if (!epoch) return;
-                                        await updateVisibility(post, post.status, { publish_time: epoch });
-                                        closeScheduleMenu();
-                                      }}
-                                    >
-                                      {t("dashboard.confirm", "Confirm")}
-                                    </button>
-                                  </div>
-                                </div>
-
-                                {scheduledEpoch && (
-                                  <button
-                                    className="icon-btn-ghost text-red"
-                                    onClick={async () => {
-                                      await updateVisibility(post, post.status, { publish_time: null });
-                                      closeScheduleMenu();
-                                    }}
-                                  >
-                                    {t("dashboard.removeSchedule", "Remove scheduled publish")}
-                                  </button>
-                                )}
-
-                                {scheduledLabel && (
-                                  <div className="text-xs opacity-75">
-                                    {t("dashboard.scheduledFor", { 1: scheduledLabel })}
-                                  </div>
-                                )}
-                              </div>,
-                              document.body
-                            )}
                           </div>
                         </div>
                         </div>
@@ -1194,6 +1097,80 @@ function DashboardContent() {
                   {t("dashboard.delete", "Delete")}
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {schedulePost && (
+          <div className="modal-overlay" style={{ zIndex: 9999 }}>
+            <div className="modal-content" style={{ maxWidth: 380, position: 'relative' }} onClick={(e) => e.stopPropagation()}>
+              <button
+                onClick={closeScheduleMenu}
+                style={{ position: 'absolute', top: 12, right: 12, background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '1.2rem', lineHeight: 1, padding: 4 }}
+                aria-label="Close"
+              >
+                ✕
+              </button>
+
+              <h3 style={{ marginBottom: 4 }}>{schedulePost.title}</h3>
+              <div className="text-xs opacity-75" style={{ marginBottom: 16 }}>{t("dashboard.publicOptions", "Public options")}</div>
+
+              <button
+                className="icon-btn-ghost"
+                style={{ width: '100%', textAlign: 'left', marginBottom: 12 }}
+                onClick={async () => {
+                  await updateVisibility(schedulePost, "PUBLIC");
+                  closeScheduleMenu();
+                }}
+              >
+                {t("dashboard.publicNow", "Public Now")}
+              </button>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 }}>
+                <div className="text-xs opacity-75">{t("dashboard.schedulePublish", "Schedule publish")}</div>
+                <input
+                  type="datetime-local"
+                  value={scheduleDtLocal}
+                  onChange={(e) => setScheduleDtLocal(e.target.value)}
+                  className="input"
+                  style={{ width: '100%' }}
+                />
+                <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                  <button className="icon-btn-ghost" onClick={closeScheduleMenu}>
+                    {t("dashboard.cancel", "Cancel")}
+                  </button>
+                  <button
+                    className="icon-btn-ghost"
+                    disabled={!scheduleDtLocal}
+                    onClick={async () => {
+                      const epoch = dtLocalToEpochSeconds(scheduleDtLocal);
+                      if (!epoch) return;
+                      await updateVisibility(schedulePost, schedulePost.status, { publish_time: epoch });
+                      closeScheduleMenu();
+                    }}
+                  >
+                    {t("dashboard.confirm", "Confirm")}
+                  </button>
+                </div>
+              </div>
+
+              {getScheduledEpochSeconds(schedulePost) && (
+                <>
+                  <button
+                    className="icon-btn-ghost text-red"
+                    style={{ width: '100%', textAlign: 'left', marginBottom: 8 }}
+                    onClick={async () => {
+                      await updateVisibility(schedulePost, schedulePost.status, { publish_time: null });
+                      closeScheduleMenu();
+                    }}
+                  >
+                    {t("dashboard.removeSchedule", "Remove scheduled publish")}
+                  </button>
+                  <div className="text-xs opacity-75">
+                    {t("dashboard.scheduledFor", { 1: new Date(getScheduledEpochSeconds(schedulePost) * 1000).toLocaleString() })}
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}
