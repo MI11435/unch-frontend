@@ -56,18 +56,22 @@ export function LanguageProvider({ children }) {
 
 
     useEffect(() => {
+        let stale = false;
         setLoading(true);
         fetch(`/api/languages/${language}`)
             .then((res) => res.json())
             .then((data) => {
+                if (stale) return;
                 setTranslations(data);
                 localStorage.setItem("language", language);
                 try { localStorage.setItem(`translations_${language}`, JSON.stringify(data)); } catch {}
             })
             .catch((err) => {
+                if (stale) return;
                 console.error(`Failed to load translations for ${language}:`, err);
             })
-            .finally(() => setLoading(false));
+            .finally(() => { if (!stale) setLoading(false); });
+        return () => { stale = true; };
     }, [language]);
 
     const changeLanguage = useCallback((langCode) => {
@@ -80,13 +84,16 @@ export function LanguageProvider({ children }) {
 
     useEffect(() => {
         if (language !== 'en') {
+            let stale = false;
             fetch(`/api/languages/en`)
                 .then(res => res.json())
                 .then(data => {
+                    if (stale) return;
                     setEnTranslations(data);
                     try { localStorage.setItem('translations_en', JSON.stringify(data)); } catch {}
                 })
-                .catch(err => console.error("Failed to load English fallback:", err));
+                .catch(err => { if (!stale) console.error("Failed to load English fallback:", err); });
+            return () => { stale = true; };
         }
     }, [language]);
 

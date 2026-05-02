@@ -134,7 +134,7 @@ export default async function LevelPage({ params }) {
   if (shouldCheckSchedule) {
     const scheduled = await fetchScheduled(id);
     if (scheduled?.data) {
-      return <CountdownPage params={params} />;
+      return <CountdownPage params={params} chartStatus={level?.status} />;
     }
   }
 

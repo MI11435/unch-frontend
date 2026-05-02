@@ -924,7 +924,7 @@ function DashboardContent() {
 
                     return (
                       <div key={post.id} className="chart-card-redesigned" style={{ cursor: 'pointer' }} onClick={(e) => {
-                        if (e.target.closest('button') || e.target.closest('a') || e.target.closest('.action-menu-wrapper') || e.target.closest('.action-dropdown') || e.target.closest('.schedule-input') || e.target.closest('select')) return;
+                        if (e.target.closest('button') || e.target.closest('a') || e.target.closest('.action-menu-wrapper') || e.target.closest('.action-dropdown') || e.target.closest('.schedule-input') || e.target.closest('select') || e.target.closest('.liquid-select-wrapper') || e.target.closest('.liquid-select-dropdown')) return;
                         router.push(`/levels/UnCh-${post.id}`);
                       }}>
                         <div className="card-inner chart-card-inner">

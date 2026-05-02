@@ -3,14 +3,16 @@
 import { useEffect, useState, useRef, use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Home, Clock, Calendar } from "lucide-react";
+import { Home, Clock, Calendar, Eye } from "lucide-react";
 import { useLanguage } from "../../../../contexts/LanguageContext";
+import { useUser } from "../../../../contexts/UserContext";
 import "./countdown.css";
 
-export default function CountdownPage({ params }) {
+export default function CountdownPage({ params, chartStatus }) {
     const { id } = use(params);
     const router = useRouter();
     const { t, locale } = useLanguage();
+    const { sonolusUser } = useUser();
     const [level, setLevel] = useState(null);
     const [loading, setLoading] = useState(true);
     const [countdown, setCountdown] = useState(null);
@@ -238,6 +240,13 @@ export default function CountdownPage({ params }) {
                             <span>{t('countdown.premieres', { 1: formatDate(level.scheduled_publish) })}</span>
                             <span style={{ fontSize: '0.75rem', color: '#38bdf8', background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 6, padding: '2px 8px', fontWeight: 600, marginLeft: 4 }}>{tzAbbr}</span>
                         </div>
+
+                        {(chartStatus === 'UNLISTED' || sonolusUser?.sonolus_id === level.author || sonolusUser?.isMod || sonolusUser?.isAdmin) && (
+                            <Link href={`/levels/${id}?is_preview=true`} className="countdown-preview-btn">
+                                <Eye size={16} />
+                                <span>{t('countdown.previewChart', 'Preview Chart Page')}</span>
+                            </Link>
+                        )}
                     </div>
                 </div>
 

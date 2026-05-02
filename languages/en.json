@@ -384,7 +384,8 @@
     "hours": "Hours",
     "mins": "Mins",
     "secs": "Secs",
-    "footerMsg": "The chart will be available when the countdown ends"
+    "footerMsg": "The chart will be available when the countdown ends",
+    "previewChart": "Preview Chart Page"
   },
   "embed": {
     "likes": "Likes",
