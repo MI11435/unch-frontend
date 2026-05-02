@@ -116,7 +116,10 @@ const MemoizedChartItem = memo(function ChartItem({
 
   const handlePlay = () => {
     if (!post.bgmUrl) return;
-    play(post.id, post.bgmUrl, {
+    const proxied = post.bgmUrl.startsWith("http")
+      ? `/api/audio-proxy?url=${encodeURIComponent(post.bgmUrl)}`
+      : post.bgmUrl;
+    play(post.id, proxied, {
       title: post.title,
       thumbnail: post.coverUrl,
       href: `/levels/UnCh-${encodeURIComponent(post.id)}`,
@@ -269,7 +272,11 @@ const MemoizedChartItem = memo(function ChartItem({
 
             <div className="audio-section">
               <AudioControls
-                bgmUrl={post.bgmUrl || null}
+                bgmUrl={post.bgmUrl
+                  ? (post.bgmUrl.startsWith("http")
+                    ? `/api/audio-proxy?url=${encodeURIComponent(post.bgmUrl)}`
+                    : post.bgmUrl)
+                  : null}
                 onPlay={handlePlay}
                 onStop={handleStop}
                 isPlaying={isThisPlaying}

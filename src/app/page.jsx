@@ -211,7 +211,10 @@ function HomeContent() {
 
   const handlePlay = (id, bgmUrl = null) => {
     if (!bgmUrl) return;
-    play(id, bgmUrl, { title: "", thumbnail: "", href: "" });
+    const proxied = bgmUrl.startsWith("http") && !bgmUrl.startsWith(window.location.origin)
+      ? `/api/audio-proxy?url=${encodeURIComponent(bgmUrl)}`
+      : bgmUrl;
+    play(id, proxied, { title: "", thumbnail: "", href: "" });
   };
 
   const handleStop = (id) => {
