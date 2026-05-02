@@ -121,20 +121,23 @@ export async function generateMetadata({ params }) {
 }
 
 
-export default async function LevelPage({ params }) {
+export default async function LevelPage({ params, searchParams }) {
   const { id } = await params;
+  const { is_preview } = await searchParams;
 
   let level = null;
   try {
     level = await fetchLevel(id);
   } catch {}
 
-  const shouldCheckSchedule = !level || level.status !== 'PUBLIC';
+  if (!is_preview) {
+    const shouldCheckSchedule = !level || level.status !== 'PUBLIC';
 
-  if (shouldCheckSchedule) {
-    const scheduled = await fetchScheduled(id);
-    if (scheduled?.data) {
-      return <CountdownPage params={params} chartStatus={level?.status} />;
+    if (shouldCheckSchedule) {
+      const scheduled = await fetchScheduled(id);
+      if (scheduled?.data) {
+        return <CountdownPage params={params} chartStatus={level?.status} />;
+      }
     }
   }
 
