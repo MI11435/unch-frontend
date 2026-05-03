@@ -1,4 +1,5 @@
 import { Geist, Geist_Mono } from "next/font/google";
+
 import "./globals.css";
 import "./layout.css";
 import ClientLayout from "./ClientLayout";
@@ -58,7 +59,7 @@ export default function RootLayout({ children }) {
           async
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1175503001380961"
           crossOrigin="anonymous"
-        />
+        ></script>
       </head>
       <ClientLayout variableClasses={`${geistSans.variable} ${geistMono.variable}`}>
         {children}
