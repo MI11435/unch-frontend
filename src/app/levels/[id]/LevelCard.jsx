@@ -930,7 +930,7 @@ export default function LevelCard({ initialLevel, id, SONOLUS_SERVER_URL }) {
                 <Share2 size={18} />
                 {t('levelDetail.share')}
               </button>
-              {levelData.status !== 'PUBLIC' && !isPreview && (() => {
+              {levelData.status !== 'PUBLIC' && !isPreview && levelData.scheduled_publish && (() => {
                 const isOwner = sonolusUser?.sonolus_id === levelData.authorId;
                 const isMod = sonolusUser?.isAdmin || sonolusUser?.isMod;
                 const canPreview = levelData.status === 'UNLISTED' || isOwner || isMod;
